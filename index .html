@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rishta Connect Global</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async defer></script>
+<style>
+:root{--mr:#7b1030;--mr2:#5a0b23;--gd:#b88a2e;--gd2:#e3c070;--bg:#fbf5ec;--cd:#fff;--ink:#2b1a20;--mu:#7a6a6e;--ln:#eadfd2;--ok:#2e7d4f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a0f13;--cd:#26161c;--ink:#f5ece6;--mu:#b9a7ab;--ln:#3b2630;--mr:#a3234a}}
+:root[data-theme="dark"]{--bg:#1a0f13;--cd:#26161c;--ink:#f5ece6;--mu:#b9a7ab;--ln:#3b2630;--mr:#a3234a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;min-height:100vh}
+h1,h2,h3,.serif{font-family:'Playfair Display',Georgia,serif;margin:0 0 .4em}
+.wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--ln)}
+.nav{display:flex;align-items:center;gap:14px;padding:10px 0;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:8px;cursor:pointer;margin-inline-end:auto}
+.logo b{font:700 22px 'Playfair Display',Georgia,serif;color:var(--mr)}.logo b i{color:var(--gd);font-style:normal}
+.nav a{cursor:pointer;font-weight:500;padding:6px 2px;border-bottom:2px solid transparent}.nav a.on{color:var(--mr);border-color:var(--gd)}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;width:100%}
+select.lang{width:auto;padding:6px 8px}
+:focus-visible{outline:2px solid var(--gd);outline-offset:2px}
+.btn{background:var(--mr);color:#fff;border:0;border-radius:10px;padding:11px 18px;font-weight:600;cursor:pointer}
+.btn.gd{background:linear-gradient(#e3c070,#b88a2e);color:#3a1a05}.btn.ol{background:transparent;color:var(--mr);border:1.5px solid var(--mr)}
+.btn.w{width:100%}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.s{padding:5px 12px}
+.hero{background:linear-gradient(160deg,var(--mr2),var(--mr) 60%,#9b2a4a);color:#fff;border-radius:0 0 28px 28px;padding:48px 0 56px}
+.hero h1{font-size:clamp(30px,6vw,52px);max-width:14em}.hero p{max-width:32em;opacity:.9}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.badges span{border:1px solid var(--gd2);color:var(--gd2);border-radius:20px;padding:4px 12px;font-size:13px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.card{background:var(--cd);border:1px solid var(--ln);border-radius:16px;padding:16px}
+.av{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gd),var(--mr));color:#fff;display:grid;place-items:center;font:700 20px 'Playfair Display',serif;flex:none}
+.row{display:flex;gap:12px;align-items:center}.sp{justify-content:space-between}
+.tag{font-size:12px;border-radius:12px;padding:2px 9px;background:#f4e7c8;color:#6b4a0a}.tag.v{background:#dff1e6;color:var(--ok)}
+.mu{color:var(--mu);font-size:13px}.sec{padding:26px 0}
+.form{display:grid;gap:12px;max-width:560px}.form label{font-weight:500;font-size:13px;display:grid;gap:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.plan{cursor:pointer;border:2px solid var(--ln);border-radius:14px;padding:14px;background:var(--cd)}.plan.sel{border-color:var(--gd);background:#fdf6e3;color:#2b1a20}.plan b{color:var(--mr)}
+.steps{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}.steps span{padding:4px 12px;border-radius:14px;border:1px solid var(--ln);font-size:13px}.steps .on{background:var(--mr);color:#fff;border-color:var(--mr)}
+.modal{position:fixed;inset:0;background:#0008;display:grid;place-items:center;padding:18px;z-index:20}.modal .card{max-width:380px;width:100%}
+.chat{display:grid;gap:8px;max-height:46vh;overflow:auto;padding:8px 0}
+.b{max-width:78%;padding:8px 12px;border-radius:14px;background:var(--cd);border:1px solid var(--ln)}.b.me{background:var(--mr);color:#fff;margin-inline-start:auto;border:0}
+.lock{background:#f4e7c8;color:#5b3d06;border-radius:12px;padding:12px 14px;margin-bottom:14px}
+#toast{position:fixed;inset-inline:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));margin:auto;width:max-content;max-width:92vw;background:#2b1a20;color:#fff;padding:10px 16px;border-radius:12px;z-index:30;display:none}
+table{width:100%;border-collapse:collapse}td,th{padding:9px 6px;text-align:start}tr+tr{border-top:1px solid var(--ln)}th{color:var(--mu);font-weight:500}
+footer{text-align:center;color:var(--mu);padding:28px 0;font-size:13px}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+</style></head><body>
+<header><div class="wrap nav" id="nav"></div></header>
+<main id="app"></main>
+<footer>© Rishta Connect Global · Real connections last forever</footer>
+<div id="modal"></div><div id="toast" role="status"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api=(u,b)=>fetch(u,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-requested-with':'fetch'},body:b?JSON.stringify(b):undefined})
+ .then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Request failed. Try again.');return j});
+let toastT;const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>t.style.display='none',4500)};
+const act=f=>f().catch(e=>toast(e.message));
+let me=null,cfg=null,V='home',A=null,D={},lang='en',chatT=null;
+try{lang=localStorage.getItem('rcg-lang')||'en'}catch(e){}
+const T={en:{home:'Home',search:'Search',brokers:'Brokers',msgs:'Messages',profile:'My profile',login:'Login',out:'Log out',tag:'Your Journey to a Perfect Match',start:'Get started',find:'Find your life partner'},
+ur:{home:'ہوم',search:'تلاش',brokers:'بروکرز',msgs:'پیغامات',profile:'میرا پروفائل',login:'لاگ اِن',out:'لاگ آؤٹ',tag:'بہترین رشتے کی طرف آپ کا سفر',start:'شروع کریں',find:'اپنا جیون ساتھی تلاش کریں'},
+ar:{home:'الرئيسية',search:'بحث',brokers:'الوسطاء',msgs:'الرسائل',profile:'ملفي',login:'دخول',out:'خروج',tag:'رحلتك نحو الشريك المثالي',start:'ابدأ الآن',find:'ابحث عن شريك حياتك'}};
+const t=k=>T[lang][k];
+const PL=[{id:'basic',n:'Basic Plan',p:29,m:1,f:['View trusted profiles','Send limited messages','Basic search']},{id:'prem',n:'Premium Plan',p:69,m:3,f:['View all profiles','Unlimited messages','Profile highlights']},{id:'plus',n:'Premium Plus',p:119,m:6,f:['All Premium features','Priority broker support','Verified badge boost']}];
+const ini=n=>String(n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const active=()=>!!(me&&me.membership&&me.membership.active);
+const LOGO='<svg width="34" height="34" viewBox="0 0 40 40"><path d="M20 36C6 26 3 16 9 10c4-4 9-2 11 2 2-4 7-6 11-2 6 6 3 16-11 26z" fill="#7b1030"/><text x="20" y="24" text-anchor="middle" font-family="Georgia" font-weight="700" font-size="12" fill="#e3c070">RC</text></svg>';
+const vtags=v=>v?['identity','photo','background'].map(k=>`<span class="tag ${v[k]?'v':''}">${v[k]?'✓ ':''}${k[0].toUpperCase()+k.slice(1)}</span>`).join(' '):'';
+
+async function go(v,a){
+ clearInterval(chatT);
+ if(['search','msgs','chat','profile','pay','apply','notifs'].includes(v)&&!me){V='home';render();return login()}
+ if(v=='admin'&&!(me&&me.isAdmin)){toast('Admin access only');return}
+ V=v;A=a;D.lock=null;if(v=='chat')D.chat=null;
+ try{
+  if(v=='search'){try{D.members=await api('/api/members?'+new URLSearchParams(a||{}))}catch(e){D.members=[];D.lock=e.message}}
+  if(v=='brokers'||(v=='broker'&&!D.brokers))D.brokers=await api('/api/brokers');
+  if(v=='msgs'){[D.chats,D.blocks]=await Promise.all([api('/api/chats'),api('/api/blocks')])}
+  if(v=='apply')me=await api('/api/me');
+  if(v=='notifs'){[D.notifs,D.warns,D.appeals]=await Promise.all([api('/api/notifications'),api('/api/warnings'),api('/api/appeals')]);await api('/api/notifications/read',{});me=await api('/api/me')}
+  if(v=='chat'){
+   let id=a&&a.id;
+   if(!id&&a&&a.to){const ex=(await api('/api/chats')).find(c=>c.with.id==a.to);if(ex)id=ex.id}
+   if(id){D.chat=await api('/api/chats/'+id);D.chat.id=id}else D.chat={id:null,with:{id:a.to,n:a.name,kind:a.kind||'member'},messages:[]};
+   startPoll()}
+  if(v=='admin'){D.audF={};[D.pay,D.ver,D.mem,D.brk,D.rep,D.aud,D.apl,D.bkp]=await Promise.all([api('/api/admin/payments'),api('/api/admin/verification'),api('/api/admin/members'),api('/api/admin/brokers'),api('/api/admin/reports'),api('/api/admin/audit'),api('/api/admin/appeals'),api('/api/admin/backups')])}
+ }catch(e){toast(e.message);if(v=='chat'&&!D.chat)V='home'}
+ render();scrollTo(0,0);if(V=='chat')paintChat()}
+function render(){nav();const bans=[];
+ if(me){
+  if(me.status=='suspended')bans.push('Your account is suspended after a safety review. '+(me.appeal&&me.appeal.suspension?'Your appeal is under review.':'<a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="appealForm(\'suspension\')">Appeal this decision</a>'));
+  else if(me.status=='pending')bans.push('Your profile is waiting for admin approval. You will appear in search once approved.');
+  for(const w of me.warnings||[])bans.push(`<b>Warning:</b> ${esc(w.message)} <button class="btn s" onclick="ackWarn(${w.id})">I understand</button> <a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="appealForm('warning',${w.id})">Appeal</a>`);
+ }
+ const ban=bans.map(b=>`<div class="lock" style="margin-bottom:8px">${b}</div>`).join('');
+ $('#app').innerHTML=(ban?`<div class="wrap" style="padding-top:14px">${ban}</div>`:'')+VIEWS[V]();const c=$('.chat');if(c)c.scrollTop=1e9}
+function nav(){const it=['home','search','brokers','msgs','profile'];
+ $('#nav').innerHTML=`<div class="logo" onclick="go('home')">${LOGO}<b>Rishta <i>Connect</i> Global</b></div>`+it.map(k=>`<a class="${V==k?'on':''}" onclick="go('${k}')">${t(k)}</a>`).join('')+
+ (me?`<a class="${V=='notifs'?'on':''}" onclick="go('notifs')">Alerts${me.unread?` <span class="tag">${me.unread}</span>`:''}</a>`:'')+(me&&me.broker?`<a class="${V=='apply'?'on':''}" onclick="go('apply')">Broker account</a>`:'')+(me&&me.isAdmin?`<a class="${V=='admin'?'on':''}" onclick="go('admin')">Admin</a>`:'')+
+ `<select class="lang" aria-label="Language" onchange="setLang(this.value)">${[['en','English'],['ur','اردو'],['ar','العربية']].map(([c,n])=>`<option value="${c}" ${lang==c?'selected':''}>${n}</option>`).join('')}</select>`+
+ (me?`<button class="btn ol" onclick="logout()">${t('out')}</button>`:`<button class="btn" onclick="login()">${t('login')}</button>`)}
+function setLang(l){lang=l;try{localStorage.setItem('rcg-lang',l)}catch(e){}document.documentElement.lang=l;document.documentElement.dir=l=='en'?'ltr':'rtl';render()}
+const lockMsg=()=>active()?'':`<div class="lock">${D.lock||(me&&me.profile?'Your profile is not active yet. Complete payment to activate it.':'Create your profile, then pay to activate it.')} <a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="go('${me&&me.profile?'pay':'profile'}')">Continue</a></div>`;
+const steps=n=>`<div class="steps"><span class="on">1 Sign in</span><span class="${n>1?'on':''}">2 Profile</span><span class="${n>2?'on':''}">3 Payment</span></div>`;
+
+const VIEWS={
+home:()=>`<section class="hero"><div class="wrap"><h1>${t('find')}</h1><p>${t('tag')}. Verified profiles, trusted brokers and private chat for families across the globe.</p><div class="badges"><span>Trusted</span><span>Safe</span><span>Genuine</span></div><button class="btn gd" onclick="${me?"go('profile')":'login()'}">${t('start')}</button></div></section>
+<div class="wrap sec"><h2>How it works</h2><div class="grid"><div class="card"><h3>1. Sign in</h3><p class="mu">Continue with your Google account.</p></div><div class="card"><h3>2. Create your profile</h3><p class="mu">Tell us about yourself and what you seek.</p></div><div class="card"><h3>3. Activate</h3><p class="mu">Pay securely by card (mada, Visa or Mastercard). Your profile goes live as soon as the payment is confirmed.</p></div><div class="card"><h3>4. Connect</h3><p class="mu">Browse verified members or work with a broker.</p></div></div></div>`,
+search:()=>{const f=A||{};return `<div class="wrap sec"><h2>Search profiles</h2>${lockMsg()}
+<form class="two" style="margin-bottom:16px" onsubmit="return doSearch(event)"><select name="g"><option value="">Any gender</option><option ${f.g=='Female'?'selected':''}>Female</option><option ${f.g=='Male'?'selected':''}>Male</option></select><input name="c" placeholder="City" maxlength="40" value="${esc(f.c||'')}"><input name="lo" type="number" min="18" max="70" placeholder="Min age" value="${esc(f.lo||'')}"><input name="hi" type="number" min="18" max="70" placeholder="Max age" value="${esc(f.hi||'')}"><button class="btn">Apply filters</button></form>
+<div class="grid">${(D.members||[]).map((m,i)=>`<div class="card"><div class="row"><div class="av">${ini(m.n)}</div><div><b>${esc(m.n)}</b> ${m.verified?'<span class="tag v">Verified</span>':'<span class="tag">Unverified</span>'}<div class="mu">${m.a} yrs · ${esc(m.c)} · ${esc(m.j)}</div></div></div><p>${esc(m.x)}</p><div class="row"><button class="btn" style="flex:1" onclick="chatWith(${i})">Send message</button><button class="btn ol" onclick="reportMember(${i})" aria-label="Report ${esc(m.n)}">Report</button></div></div>`).join('')||(D.lock?'':'<p class="mu">No members match yet. Widen your filters or check back soon.</p>')}</div></div>`},
+brokers:()=>{const L=D.brokers||[];return `<div class="wrap sec"><div class="row sp"><h2>Verified brokers</h2><button class="btn ol" onclick="${me?"go('apply')":'login()'}">Become a broker</button></div><p class="mu">Matrimonial brokers approved by our team who manage introductions on your behalf.</p><div class="grid">${L.map((b,i)=>`<div class="card"><div class="row"><div class="av">${ini(b.n)}</div><div><b>${esc(b.n)}</b> <span class="tag v">Verified</span><div class="mu">${esc(b.c)}</div><div class="mu">${esc(b.e)} experience</div></div></div><button class="btn ol w" style="margin-top:12px" onclick="go('broker',${i})">View profile</button></div>`).join('')||'<p class="mu">No brokers have been approved yet.</p>'}</div></div>`},
+broker:()=>{const b=(D.brokers||[])[A];if(!b)return VIEWS.brokers();return `<div class="wrap sec"><div class="card" style="max-width:560px"><div class="row"><div class="av" style="width:80px;height:80px;font-size:28px">${ini(b.n)}</div><div><h2 style="margin:0">${esc(b.n)}</h2><span class="tag v">Verified</span><div class="mu">Matrimonial broker</div></div></div><p><b>Location:</b> ${esc(b.c)}<br><b>Experience:</b> ${esc(b.e)}<br><b>Languages:</b> ${esc(b.l)}<br><b>Specialization:</b> ${esc(b.s)}</p><p>${esc(b.x)}</p><div class="row"><button class="btn" style="flex:1" onclick="contactBroker(${A})">Contact broker</button><button class="btn ol" onclick="reportBroker(${A})">Report</button></div></div></div>`},
+apply:()=>{const b=me.broker,st=b&&b.status;const msg={pending:'Your application is under review. We will approve it once your details are checked.',approved:'You are a verified broker. Clients reach you through Messages.',suspended:'Your broker account is suspended. Contact support for help.',rejected:'Your application was not approved.'};
+ const form=`<form class="form" onsubmit="return applyBroker(event)"><label>Full name<input name="n" required maxlength="60" value="${esc(me.name)}"></label><label>City, country<input name="c" required maxlength="60"></label><div class="two"><label>Experience (for example 5 years)<input name="e" required maxlength="30"></label><label>Languages<input name="l" required maxlength="60"></label></div><label>Specialization<input name="s" required maxlength="120"></label><label>About you<textarea name="x" rows="3" required maxlength="400"></textarea></label><button class="btn">${st=='rejected'?'Apply again':'Submit application'}</button></form>`;
+ return `<div class="wrap sec"><h2>Broker account</h2>${st?`<div class="card" style="max-width:560px;margin-bottom:16px"><span class="tag ${st=='approved'?'v':''}">${esc(st)}</span><p>${msg[st]}</p>${b.reason?`<p class="mu">Reason: ${esc(b.reason)}</p>`:''}${st=='suspended'?(me.appeal&&me.appeal.broker?'<span class="tag">Appeal sent</span>':`<button class="btn ol" onclick="appealForm('broker')">Appeal this decision</button>`):''}${st=='approved'?`<button class="btn" onclick="go('msgs')">Open messages</button>`:''}</div>`:'<p class="mu">Brokers are reviewed by our team before they are listed or shown as Verified.</p>'}${!st||st=='rejected'?form:''}</div>`},
+notifs:()=>{const N=(D.notifs||{}).rows||[],W=D.warns||[],AP=D.appeals||[];
+ const kind={suspension:'Account suspension',warning:'Warning',broker:'Broker suspension'};
+ return `<div class="wrap sec"><h2>Alerts</h2>
+${W.length?`<h3>Warnings on your account</h3>${W.map(w=>`<div class="card" style="margin-bottom:8px"><p>${esc(w.message)}</p><div class="mu">${new Date(w.at).toLocaleDateString()}</div>${w.appealed?'<span class="tag">Appeal sent</span>':`<button class="btn ol s" onclick="appealForm('warning',${w.id})">Appeal this warning</button>`}</div>`).join('')}`:''}
+<h3 style="margin-top:20px">Notifications</h3>${N.map(n=>`<div class="card" style="margin-bottom:8px"><div class="row sp"><b>${esc(n.title)}${n.unread?' <span class="tag">New</span>':''}</b><span class="mu">${new Date(n.at).toLocaleString()}</span></div><p>${esc(n.body)}</p></div>`).join('')||'<p class="mu">No notifications yet.</p>'}
+${AP.length?`<h3 style="margin-top:24px">Your appeals</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>About</th><th>Status</th><th>Reviewer note</th></tr>${AP.map(a=>`<tr><td>${new Date(a.created_at).toLocaleDateString()}</td><td>${kind[a.kind]||esc(a.kind)}</td><td><span class="tag ${a.status=='overturned'?'v':''}">${a.status=='open'?'Under review':a.status=='overturned'?'Successful':'Decision stands'}</span></td><td class="mu">${esc(a.note||'')}</td></tr>`).join('')}</table></div>`:''}</div>`},
+msgs:()=>{const L=D.chats||[],BL=D.blocks||[];return `<div class="wrap sec"><h2>Messages</h2><div class="grid">${L.map(c=>`<div class="card" style="cursor:pointer" onclick="go('chat',{id:${c.id}})"><div class="row"><div class="av">${ini(c.with.n)}</div><div><b>${esc(c.with.n)}</b> ${c.with.kind=='broker'?'<span class="tag v">Broker</span>':''}${c.unread?` <span class="tag">${c.unread} new</span>`:''}<div class="mu">${esc((c.last.mine?'You: ':'')+c.last.body.slice(0,60))}</div></div></div></div>`).join('')||'<p class="mu">No conversations yet. Message a member or contact a broker.</p>'}</div>${BL.length?`<h3 style="margin-top:24px">Blocked members</h3>${BL.map((b,i)=>`<div class="row sp card" style="margin-bottom:8px"><span>${esc(b.n)}</span><button class="btn ol s" onclick="unblock(${i})">Unblock</button></div>`).join('')}`:''}</div>`},
+chat:()=>{const c=D.chat;return `<div class="wrap sec"><div class="card" style="max-width:600px"><div class="row sp"><div class="row"><div class="av">${ini(c.with.n)}</div><b>${esc(c.with.n)}</b>${c.with.kind=='broker'?' <span class="tag v">Broker</span>':''}</div><div class="row"><button class="btn ol s" onclick="reportUser()">Report</button><button class="btn ol s" onclick="blockUser()">Block</button></div></div><div class="chat" id="chatbox"></div><form class="row" onsubmit="return sendMsg(event)"><input name="t" maxlength="1000" placeholder="Type a message…" autocomplete="off" required><button class="btn">Send</button></form><p class="mu">Never send money or bank details to someone you have not met in person with your family.</p></div></div>`},
+profile:()=>{const p=me.profile;if(!p)return `<div class="wrap sec"><h2>Create your profile</h2>${steps(2)}<form class="form" onsubmit="return saveProfile(event)">
+<label>Full name<input name="n" required maxlength="60" value="${esc(me.name)}"></label><div class="two"><label>Gender<select name="g"><option>Female</option><option>Male</option></select></label><label>Age<input name="a" type="number" min="18" max="70" required></label></div>
+<div class="two"><label>City, country<input name="c" required maxlength="60"></label><label>Marital status<select name="m"><option>Never married</option><option>Divorced</option><option>Widowed</option></select></label></div>
+<div class="two"><label>Education<input name="e" required maxlength="60"></label><label>Occupation<input name="j" required maxlength="60"></label></div>
+<label>About you<textarea name="x" rows="3" required maxlength="400"></textarea></label><label>Looking for<textarea name="w" rows="2" required maxlength="300"></textarea></label>
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" required style="width:auto"> I agree to the Terms &amp; Conditions and Privacy Policy</label><button class="btn">Save and continue to payment</button></form></div>`;
+ const m=me.membership;return `<div class="wrap sec"><h2>My profile</h2>${steps(active()?4:3)}<div class="card" style="max-width:560px"><div class="row"><div class="av">${ini(p.n)}</div><div><b>${esc(p.n)}</b> <span class="tag ${active()?'v':''}">${active()?'Active':'Pending payment'}</span><div class="mu">${p.a} yrs · ${esc(p.c)} · ${esc(p.j)}</div></div></div><p>${esc(p.x)}</p><p class="mu">Looking for: ${esc(p.w)}</p><p>${vtags(me.verification)}</p>
+${active()?`<p class="mu">${(PL.find(x=>x.id==m.plan)||{}).n||'Membership'} active until ${new Date(m.expires_at).toLocaleDateString()}</p>`:`<button class="btn gd w" onclick="go('pay')">Complete payment to activate</button>`}</div></div>`},
+pay:()=>{if(!me.profile)return VIEWS.profile();const sel=A||'prem',x=PL.find(p=>p.id==sel);return `<div class="wrap sec"><h2>Activate your profile</h2>${steps(3)}<div class="grid">${PL.map(p=>`<div class="plan ${p.id==sel?'sel':''}" onclick="go('pay','${p.id}')"><h3>${p.n}</h3><b>${p.p} SAR</b> <span class="mu">/ ${p.m} month${p.m>1?'s':''}</span><ul class="mu">${p.f.map(f=>`<li>${f}</li>`).join('')}</ul></div>`).join('')}</div>
+<div class="form" style="margin-top:20px"><button class="btn gd w" id="paybtn" onclick="startPay('${sel}')">Pay ${x.p} SAR securely</button>${cfg&&cfg.paymentMode=='test'?'<div class="lock">Test mode: no real money is charged. Use card 4111 1111 1111 1111 with any future expiry and any CVC.</div>':''}<p class="mu">Your card details go straight to Moyasar and never reach our servers. Your profile activates automatically once the payment is confirmed.</p></div></div>`},
+payresult:()=>{const p=D.pr||{};const s=p.status;return `<div class="wrap sec"><div class="card" style="max-width:520px"><h2>${s=='paid'?'Payment confirmed':s=='failed'?'Payment not completed':'Confirming your payment…'}</h2><p class="mu">${s=='paid'?'Your profile is now active.':s=='failed'?'No money was taken. You can try again.':'This usually takes a few seconds. Keep this page open.'}</p>${s=='paid'?`<button class="btn w" onclick="go('search')">Browse members</button>`:s=='failed'?`<button class="btn w" onclick="go('pay')">Try again</button>`:''}</div></div>`},
+admin:()=>{const P=D.pay||[],R=D.ver||[],MB=D.mem||[],BK=D.brk||[],RP=D.rep||{open:[],resolved:[]},APL=D.apl||{open:[],resolved:[]},sum=a=>a.reduce((s,p)=>s+p.amount,0),paid=P.filter(p=>p.status=='paid'),rf=P.filter(p=>p.status=='refunded');
+ const q=R.map((r,i)=>[r,i]).filter(([r])=>!r.verified),vd=R.map((r,i)=>[r,i]).filter(([r])=>r.verified);
+ const st=(n,l)=>`<div class="card"><div class="serif" style="font-size:28px;color:var(--mr)">${n}</div><div class="mu">${l}</div></div>`;
+ const ck=(i,k,l)=>{const on=R[i][k];return `<button class="btn s ${on?'':'ol'}" style="margin:2px" onclick="vck(${i},'${k}')">${on?'✓ ':''}${l}</button>`};
+ return `<div class="wrap sec"><h2>Admin panel</h2><div class="grid" style="margin-bottom:22px">${st(R.length,'Members with profiles')}${st(vd.length,'Verified')}${st(q.length,'Awaiting verification')}${st(sum(paid)+' SAR','Collected')}${st(sum(rf)+' SAR','Refunded')}${st(P.length,'Transactions')}${st(MB.filter(m=>m.status=='suspended').length,'Suspended')}${st(BK.filter(b=>b.status=='pending').length,'Broker applications')}${st(RP.open.length,'Open reports')}${st(APL.open.length,'Open appeals')}</div>
+${appealSec()}<h3 style="margin-top:24px">Reports to review (${RP.open.length})</h3>${RP.open.map((r,i)=>`<div class="card" style="margin-bottom:12px"><div class="row sp"><div><span class="tag">${esc(r.category)}</span> <span class="tag">via ${({search:'search results',broker:'broker page'})[r.source]||'chat'}</span> <b>${esc(r.reported.n)}</b> <span class="mu">${esc(r.reported.email)}</span></div><span class="mu">${new Date(r.created_at).toLocaleString()}</span></div><p class="mu">Reported by ${esc(r.reporter.n)} (${esc(r.reporter.email)}) · ${r.reported.total} report${r.reported.total>1?'s':''} against this member · ${r.reported.warnings} active warning${r.reported.warnings==1?'':'s'} · account ${esc(r.reported.status)}</p>${r.details?`<p>${esc(r.details)}</p>`:''}${r.evidence.length?`<details><summary>Conversation snapshot (${r.evidence.length} messages)</summary><div class="chat">${r.evidence.map(m=>`<div class="b ${m.from=='reporter'?'me':''}">${esc(m.body)}</div>`).join('')}</div><p class="mu">Right-aligned messages were sent by the reporter.</p></details>`:'<p class="mu">No conversation attached.</p>'}<div class="row" style="margin-top:8px"><button class="btn ol s" onclick="rres(${i},'dismiss')">Dismiss</button><button class="btn ol s" onclick="rres(${i},'warn')">Warn member</button><button class="btn s" onclick="rres(${i},'suspend')">Suspend member</button></div></div>`).join('')||'<p class="mu">No open reports.</p>'}${RP.resolved.length?`<details><summary>Recently resolved (${RP.resolved.length})</summary><div style="overflow-x:auto"><table><tr><th>Date</th><th>Member</th><th>Reason</th><th>Outcome</th><th>Note</th></tr>${RP.resolved.map(r=>`<tr><td>${new Date(r.resolved_at).toLocaleDateString()}</td><td>${esc(r.reported.email)}</td><td>${esc(r.category)}</td><td><span class="tag ${r.outcome=='dismiss'?'v':''}">${esc(r.outcome)}</span></td><td class="mu">${esc(r.note)}</td></tr>`).join('')}</table></div></details>`:''}
+<h3 style="margin-top:24px">Members (${MB.length})</h3>${MB.length?`<div style="overflow-x:auto"><table><tr><th>Member</th><th>Status</th><th>Membership</th><th></th></tr>${MB.map((m,i)=>`<tr><td>${esc(m.name||m.email)}<div class="mu">${esc(m.email)}</div></td><td><span class="tag ${m.status=='approved'?'v':''}">${esc(m.status)}</span>${m.reason?`<div class="mu">${esc(m.reason)}</div>`:''}</td><td class="mu">${m.membership.active?'Active':'None'}</td><td>${m.email==me.email?'':(m.status!='suspended'?`<button class="btn ol s" onclick="msus(${i})">Suspend</button> `:'')+(m.status!='approved'?`<button class="btn s" onclick="mapp(${i})">${m.status=='suspended'?'Reinstate':'Approve'}</button>`:'')}</td></tr>`).join('')}</table></div>`:'<p class="mu">No members yet.</p>'}
+<h3 style="margin-top:24px">Broker applications (${BK.length})</h3>${BK.length?`<div style="overflow-x:auto"><table><tr><th>Broker</th><th>Details</th><th>Status</th><th></th></tr>${BK.map((b,i)=>`<tr><td>${esc(b.n)}<div class="mu">${esc(b.email)}</div></td><td class="mu">${esc(b.c)} · ${esc(b.e)} · ${esc(b.l)}<br>${esc(b.s)}</td><td><span class="tag ${b.status=='approved'?'v':''}">${esc(b.status)}</span>${b.reason?`<div class="mu">${esc(b.reason)}</div>`:''}</td><td>${b.status!='approved'?`<button class="btn s" onclick="bapp(${i})">${b.status=='suspended'?'Reinstate':'Approve'}</button> `:''}${b.status=='pending'?`<button class="btn ol s" onclick="brej(${i})">Reject</button>`:''}${b.status=='approved'?`<button class="btn ol s" onclick="bsus(${i})">Suspend</button>`:''}</td></tr>`).join('')}</table></div>`:'<p class="mu">No applications yet.</p>'}
+<h3 style="margin-top:24px">Verification queue (${q.length})</h3>${q.length?`<div class="grid">${q.map(([r,i])=>`<div class="card"><b>${esc(r.name||r.email)}</b>${r.revoked_at?' <span class="tag">Revoked</span>':''}<div class="mu">${esc(r.email)}</div><div>${ck(i,'identity','Identity')}${ck(i,'photo','Photo')}${ck(i,'background','Background')}</div><button class="btn gd w" style="margin-top:8px" onclick="vall(${i})">Approve all</button></div>`).join('')}</div>`:'<p class="mu">The queue is clear.</p>'}
+<h3 style="margin-top:24px">Verified members (${vd.length})</h3>${vd.length?`<div style="overflow-x:auto"><table>${vd.map(([r,i])=>`<tr><td>${esc(r.name||r.email)}<div class="mu">${esc(r.email)}</div></td><td><span class="tag v">Verified</span></td><td><button class="btn ol s" onclick="vrev(${i})">Revoke verification</button></td></tr>`).join('')}</table></div>`:'<p class="mu">No verified members yet.</p>'}
+<h3 style="margin-top:24px">Payments and transactions</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>Member</th><th>Plan</th><th>Amount</th><th>Status</th><th></th></tr>${P.map((p,i)=>`<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${esc(p.email)}</td><td>${esc(p.plan)}</td><td>${p.amount} ${esc(p.currency)}</td><td><span class="tag ${p.status=='paid'?'v':''}">${esc(p.status)}</span></td><td>${p.status=='paid'?`<button class="btn ol s" onclick="refund(${i})">Refund</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">No transactions yet.</td></tr>'}</table></div>${backupSec()}${auditSec()}</div>`}};
+
+/* ---- actions ---- */
+function closeM(){$('#modal').innerHTML=''}
+function login(n=0){$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Welcome</h2><p class="mu">Sign in to create your profile.</p><div id="gbtn" style="min-height:44px"></div><br><button class="btn w" id="abtn" style="background:#000;color:#fff" disabled onclick="appleLogin()">${cfg&&cfg.appleClientId?'Continue with Apple':'Apple sign-in is not configured'}</button></div></div>`;initG(0);prepApple(0)}
+function initG(n){if(!window.google||!cfg){if(n<30)setTimeout(()=>initG(n+1),300);else toast('Google sign-in could not load. Check your connection.');return}
+ google.accounts.id.initialize({client_id:cfg.googleClientId,callback:r=>act(async()=>{await api('/api/auth/google',{credential:r.credential});me=await api('/api/me');closeM();go(me.profile?(active()?'search':'pay'):'profile')})});
+ google.accounts.id.renderButton($('#gbtn'),{theme:'outline',size:'large',text:'continue_with',width:300})}
+let appleReady=false;
+async function prepApple(n){const b=$('#abtn');appleReady=false;if(b)b.disabled=true;if(!cfg||!cfg.appleClientId)return;
+ if(!window.AppleID){if(n<30)setTimeout(()=>prepApple(n+1),300);return}
+ try{const {nonce}=await api('/api/auth/apple/nonce');AppleID.auth.init({clientId:cfg.appleClientId,scope:'name email',redirectURI:cfg.appleRedirectUri,state:'rcg',nonce,usePopup:true});appleReady=true;const b2=$('#abtn');if(b2)b2.disabled=false}catch(e){}}
+function appleLogin(){if(!appleReady)return toast('Apple sign-in is still loading. Try again in a moment.');appleReady=false; // signIn() must run straight from the click so the popup is not blocked; the nonce was fetched beforehand
+ AppleID.auth.signIn().then(async r=>{const nm=r.user&&r.user.name?[r.user.name.firstName,r.user.name.lastName].filter(Boolean).join(' '):'';
+  await api('/api/auth/apple',{id_token:r.authorization.id_token,name:nm});me=await api('/api/me');closeM();go(me.profile?(active()?'search':'pay'):'profile')})
+ .catch(e=>{if(e&&e.message)toast(e.message);else if(!e||(e.error!=='popup_closed_by_user'&&e.error!=='user_cancelled_authorize'))toast('Apple sign-in did not complete. Please try again.');prepApple(0)})}
+function logout(){act(async()=>{await api('/api/auth/logout',{});me=null;go('home')})}
+function doSearch(e){e.preventDefault();const f=Object.fromEntries([...new FormData(e.target)].filter(([,v])=>v));go('search',f);return false}
+function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));act(async()=>{await api('/api/profile',f);me=await api('/api/me');go('pay')});return false}
+const MPF='https://cdn.moyasar.com/mpf/1.15.0/';
+let mpfP=null;
+function loadMpf(){if(window.Moyasar)return Promise.resolve();if(!mpfP)mpfP=new Promise((ok,no)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=MPF+'moyasar.css';document.head.appendChild(l);const s=document.createElement('script');s.src=MPF+'moyasar.js';s.onload=ok;s.onerror=()=>{mpfP=null;no(new Error('Could not load the secure payment form. Check your connection and try again.'))};document.head.appendChild(s)});return mpfP}
+function startPay(plan){const b=$('#paybtn'),label=b.textContent;b.disabled=true;b.textContent='Preparing secure payment…';
+ act(async()=>{try{const [r]=await Promise.all([api('/api/checkout',{plan}),loadMpf()]);
+  $('#modal').innerHTML=`<div class="modal"><div class="card" style="max-width:420px"><div class="row sp"><h2 style="margin:0">Pay ${r.amount/100} ${esc(r.currency)}</h2><button class="btn ol s" onclick="closeM()">Close</button></div>${cfg&&cfg.paymentMode=='test'?'<div class="lock" style="margin-top:10px">Test mode: no real money is charged. Use card 4111 1111 1111 1111 with any future expiry and any CVC.</div>':''}<div class="mysr-form" style="margin-top:12px"></div><p class="mu">Your card details go straight to Moyasar and never reach our servers. Your profile activates automatically once the payment is confirmed.</p></div></div>`;
+  Moyasar.init({element:'.mysr-form',amount:r.amount,currency:r.currency,description:r.description,publishable_api_key:r.publishable_key,callback_url:r.callback_url,metadata:r.metadata,methods:['creditcard'],supported_networks:['mada','visa','mastercard'],apply_coupon:false,language:lang=='ar'?'ar':'en',on_failure:e=>toast(String(e||'Payment failed. Please try again.'))});
+  b.disabled=false;b.textContent=label}catch(e){b.disabled=false;b.textContent=label;throw e}})}
+async function pollPay(id,n=0){try{D.pr=await api('/api/payments/'+encodeURIComponent(id))}catch(e){D.pr={status:'failed'}}
+ if(D.pr.status=='paid')me=await api('/api/me');
+ if(V=='payresult')render();
+ if(D.pr.status=='pending'&&n<40)setTimeout(()=>pollPay(id,n+1),2000)}
+const msgHtml=m=>`<div class="b ${m.mine?'me':''}">${esc(m.body)}</div>`;
+function paintChat(){const b=$('#chatbox');if(!b||!D.chat)return;b.innerHTML=D.chat.messages.map(msgHtml).join('')||'<p class="mu">Say Assalamu Alaikum to start.</p>';b.scrollTop=1e9}
+function startPoll(){clearInterval(chatT);chatT=setInterval(async()=>{if(V!='chat'||!D.chat||!D.chat.id)return;try{const ms=D.chat.messages,r=await api(`/api/chats/${D.chat.id}?after=${ms.length?ms[ms.length-1].id:0}`);if(r.messages.length){D.chat.messages.push(...r.messages);paintChat()}}catch(e){}},4000)}
+function startChat(uid,name,kind){if(!me)return login();go('chat',{to:uid,name,kind})}
+const chatWith=i=>startChat(D.members[i].id,D.members[i].n,'member');
+const contactBroker=i=>startChat(D.brokers[i].id,D.brokers[i].n,'broker');
+function sendMsg(e){e.preventDefault();const inp=e.target.t,v=inp.value.trim();if(!v)return false;inp.disabled=true;
+ act(async()=>{try{const c=D.chat;if(c.id){const r=await api(`/api/chats/${c.id}/messages`,{body:v});c.messages.push({id:r.id,mine:true,body:v})}
+  else{const r=await api('/api/chats',{to:c.with.id,body:v});c.id=r.id;c.messages=(await api('/api/chats/'+r.id)).messages;startPoll()}
+  inp.value='';paintChat()}finally{inp.disabled=false;inp.focus()}});return false}
+function applyBroker(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));act(async()=>{await api('/api/broker/apply',f);me=await api('/api/me');toast('Application submitted');go('apply')});return false}
+const bem=i=>encodeURIComponent(D.brk[i].email);
+function bapp(i){act(async()=>{await api(`/api/admin/brokers/${bem(i)}/approve`,{});await reloadAdmin()})}
+function brej(i){const r=prompt(`Reject ${D.brk[i].email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/brokers/${bem(i)}/reject`,{reason:r});await reloadAdmin()})}
+function bsus(i){const r=prompt(`Suspend ${D.brk[i].email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/brokers/${bem(i)}/suspend`,{reason:r});await reloadAdmin()})}
+function blockUser(){if(!confirm(`Block ${D.chat.with.n}? You will no longer see each other in search or be able to message.`))return;act(async()=>{await api('/api/blocks',{user:D.chat.with.id});toast('Member blocked');go('msgs')})}
+function unblock(i){act(async()=>{await api('/api/blocks/remove',{user:D.blocks[i].id});go('msgs')})}
+let RT=null;
+function reportUser(t){if(!me)return login();RT=t||{id:D.chat.with.id,n:D.chat.with.n,source:'chat'};$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Report ${esc(RT.n)}</h2><form class="form" onsubmit="return submitReport(event)"><label>What happened?<select name="category"><option value="harassment">Harassment or abuse</option><option value="scam">Scam or asking for money</option><option value="fake">Fake or misleading profile</option><option value="inappropriate">Inappropriate content</option><option value="other">Something else</option></select></label><label>Details (optional)<textarea name="details" rows="3" maxlength="500"></textarea></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="block" checked style="width:auto"> Also block this member</label><p class="mu">${RT.source=='chat'?'An administrator will review the last 20 messages of this conversation. ':'An administrator will review your report. '}The member is not told who reported them.</p><button class="btn w">Send report</button></form></div></div>`}
+const reportMember=i=>reportUser({id:D.members[i].id,n:D.members[i].n,source:'search'});
+const reportBroker=i=>reportUser({id:D.brokers[i].id,n:D.brokers[i].n,source:'broker'});
+function submitReport(e){e.preventDefault();const f=new FormData(e.target),bl=!!f.get('block'),t=RT;act(async()=>{await api('/api/reports',{user:t.id,category:f.get('category'),details:f.get('details'),block:bl,source:t.source});closeM();toast('Report sent. Thank you.');if(bl)go(t.source=='chat'?'msgs':t.source=='search'?'search':'brokers',t.source=='search'?A:undefined)});return false}
+function rres(i,outcome){const r=D.rep.open[i],ask={dismiss:'Dismiss this report? Enter a note for the record:',warn:`Send ${r.reported.email} a warning? Enter a note for the record (the member will not see it):`,suspend:`Suspend ${r.reported.email}? Enter a note for the record (the member will not see it):`},n=prompt(ask[outcome]);if(!n)return;act(async()=>{await api(`/api/admin/reports/${r.id}/resolve`,{outcome,note:n});await reloadAdmin()})}
+function auditSec(){const X=D.aud||{rows:[],more:false,actions:[]},f=D.audF||{};
+ return `<h3 style="margin-top:24px">Audit log</h3><form class="row" style="flex-wrap:wrap;margin-bottom:10px" onsubmit="return auditFind(event)"><select name="action" aria-label="Action" style="width:auto"><option value="">All actions</option>${X.actions.map(a=>`<option value="${esc(a)}" ${f.action==a?'selected':''}>${esc(a.replace(/-/g,' '))}</option>`).join('')}</select><input name="q" aria-label="Search" placeholder="Search target or reason" maxlength="60" value="${esc(f.q||'')}" style="width:auto;flex:1;min-width:160px"><button class="btn s">Filter</button><button type="button" class="btn ol s" onclick="auditExport()">Export CSV</button></form><div style="overflow-x:auto"><table><tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Reason</th></tr>${X.rows.map(r=>`<tr><td class="mu">${new Date(r.at).toLocaleString()}</td><td>${esc(r.admin)}</td><td><span class="tag">${esc(r.action.replace(/-/g,' '))}</span></td><td>${esc(r.target)}</td><td class="mu">${esc(r.reason)}</td></tr>`).join('')||'<tr><td colspan="5" class="mu">No entries match.</td></tr>'}</table></div>${X.more?'<button class="btn ol s" style="margin-top:10px" onclick="auditMore()">Load more</button>':''}<p class="mu">The log is append-only: entries cannot be edited or deleted through the app. Export uses the filters you last applied, and each export is recorded here.</p>`}
+const auditQS=(f,before)=>new URLSearchParams({...(f.action?{action:f.action}:{}),...(f.q?{q:f.q}:{}),...(before?{before}:{})});
+function auditExport(){const f=D.audF||{};act(async()=>{const r=await fetch('/api/admin/audit/export?'+auditQS(f),{headers:{'x-requested-with':'fetch'}});
+ if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Export failed')}
+ const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`audit-log-${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ toast(r.headers.get('x-truncated')?'Exported the newest 50,000 entries. Narrow the filters to get the rest.':'Audit log exported')})}
+function auditFind(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));D.audF=f;act(async()=>{D.aud=await api('/api/admin/audit?'+auditQS(f));render()});return false}
+function auditMore(){const f=D.audF||{},last=D.aud.rows[D.aud.rows.length-1];act(async()=>{const r=await api('/api/admin/audit?'+auditQS(f,last.id));D.aud={...r,rows:D.aud.rows.concat(r.rows),actions:D.aud.actions};render()})}
+let AT=null;
+function appealForm(kind,ref){AT={kind,ref};const t={suspension:'Appeal your suspension',warning:'Appeal this warning',broker:'Appeal your broker suspension'}[kind];$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>${t}</h2><form class="form" onsubmit="return submitAppeal(event)"><label>Why should this decision be reviewed?<textarea name="message" rows="5" required minlength="20" maxlength="1000"></textarea></label><p class="mu">A different reviewer will read this. You will get a notification with the decision. You can appeal the same decision again only after 30 days.</p><button class="btn w">Send appeal</button></form></div></div>`}
+function submitAppeal(e){e.preventDefault();const m=new FormData(e.target).get('message');act(async()=>{await api('/api/appeals',{kind:AT.kind,ref:AT.ref,message:m});closeM();toast('Appeal sent');if(V=='notifs')await go('notifs');else{me=await api('/api/me');render()}});return false}
+function ackWarn(id){act(async()=>{await api(`/api/warnings/${id}/ack`,{});me=await api('/api/me');if(V=='notifs')D.warns=await api('/api/warnings');render()})}
+function appealSec(){const A=D.apl||{open:[],resolved:[]},kind={suspension:'Account suspension',warning:'Warning',broker:'Broker suspension'};
+ return `<h3>Appeals to review (${A.open.length})</h3>${A.open.map((a,i)=>`<div class="card" style="margin-bottom:12px"><div class="row sp"><div><span class="tag">${kind[a.kind]||esc(a.kind)}</span> <b>${esc(a.name)}</b> <span class="mu">${esc(a.email)}</span></div><span class="mu">${new Date(a.created_at).toLocaleString()}</span></div>${a.warning?`<p class="mu">Warning text: ${esc(a.warning)}</p>`:''}<p>${esc(a.message)}</p><p class="mu">Original decision by ${esc(a.original_admin||'unknown')}</p>${a.own?'<p class="mu">You made the original decision, so a different admin must review this appeal.</p>':`<div class="row"><button class="btn ol s" onclick="adec(${i},'uphold')">Uphold decision</button><button class="btn s" onclick="adec(${i},'overturn')">Overturn decision</button></div>`}</div>`).join('')||'<p class="mu">No open appeals.</p>'}${A.resolved.length?`<details><summary>Recently decided (${A.resolved.length})</summary><div style="overflow-x:auto"><table><tr><th>Date</th><th>Member</th><th>About</th><th>Result</th><th>Note</th></tr>${A.resolved.map(a=>`<tr><td>${new Date(a.resolved_at).toLocaleDateString()}</td><td>${esc(a.email)}</td><td>${kind[a.kind]||esc(a.kind)}</td><td><span class="tag ${a.status=='overturned'?'v':''}">${esc(a.status)}</span></td><td class="mu">${esc(a.note)}</td></tr>`).join('')}</table></div></details>`:''}`}
+function adec(i,decision){const a=D.apl.open[i],n=prompt(decision=='overturn'?`Overturn the decision for ${a.email}? Enter a note (the member will see it):`:`Uphold the decision for ${a.email}? Enter a note (the member will see it):`);if(!n)return;act(async()=>{await api(`/api/admin/appeals/${a.id}/decide`,{decision,note:n});await reloadAdmin()})}
+function backupSec(){const b=D.bkp;if(!b)return '';const fmt=x=>x?new Date(x).toLocaleString():'never';
+ return `<h3 style="margin-top:24px">Backups</h3>${!b.enabled?'<div class="lock">Backups are switched off. Set BACKUP_ENABLED=true and BACKUP_KEY in .env, then restart the server.</div>':b.stale?`<div class="lock">No successful backup in the last 36 hours (last: ${fmt(b.lastOk)}). Check the runs below.</div>`:''}
+<p class="mu">${b.enabled?`Runs daily at ${b.at} UTC · keeps the newest ${b.keep} · ${b.copy?'second copy configured':'no second copy configured'} · last success: ${fmt(b.lastOk)}`:'Not running.'}</p>
+<button class="btn ol s" onclick="runBackupNow()" ${b.enabled&&!b.running?'':'disabled'}>Back up now</button>
+<div style="overflow-x:auto;margin-top:10px"><table><tr><th>Started</th><th>How</th><th>Result</th><th>Size</th><th>Audit rows</th><th>Detail</th></tr>${b.runs.map(r=>`<tr><td>${new Date(r.started_at).toLocaleString()}</td><td>${esc(r.trigger)}</td><td><span class="tag ${r.status=='ok'?'v':''}">${esc(r.status)}</span></td><td class="mu">${r.bytes?(r.bytes/1048576).toFixed(2)+' MB':''}</td><td class="mu">${r.audit_rows??''}</td><td class="mu">${esc(r.error||'')}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">No backups yet.</td></tr>'}</table></div><p class="mu">Backups are encrypted files on the server. They are not downloadable from this page; see the README for restoring.</p>`}
+function runBackupNow(){act(async()=>{toast('Backup started…');await api('/api/admin/backups/run',{});toast('Backup finished and verified');D.bkp=await api('/api/admin/backups');render()})}
+const reloadAdmin=()=>go('admin');
+const em=i=>encodeURIComponent(D.ver[i].email);
+function vck(i,k){act(async()=>{await api(`/api/admin/verification/${em(i)}/check`,{check:k,value:D.ver[i][k]?0:1});await reloadAdmin()})}
+function vall(i){act(async()=>{await api(`/api/admin/verification/${em(i)}/approve`,{});await reloadAdmin()})}
+function msus(i){const m=D.mem[i],r=prompt(`Suspend ${m.email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/members/${encodeURIComponent(m.email)}/suspend`,{reason:r});await reloadAdmin()})}
+function mapp(i){const m=D.mem[i];act(async()=>{await api(`/api/admin/members/${encodeURIComponent(m.email)}/approve`,{});await reloadAdmin()})}
+function vrev(i){const r=prompt('Reason for revoking verification:');if(!r)return;act(async()=>{await api(`/api/admin/verification/${em(i)}/revoke`,{reason:r});await reloadAdmin()})}
+function refund(i){const p=D.pay[i],r=prompt(`Refund ${p.amount} ${p.currency} to ${p.email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/payments/${encodeURIComponent(p.id)}/refund`,{reason:r});toast('Refund sent');await reloadAdmin()})}
+
+/* ---- start ---- */
+(async()=>{
+ try{cfg=await api('/api/config')}catch(e){}
+ try{me=await api('/api/me')}catch(e){me=null}
+ setLang(lang);
+ setInterval(async()=>{if(!me||document.hidden)return;try{me=await api('/api/me');nav()}catch(e){}},60000);
+ const pid=new URLSearchParams(location.search).get('payment');
+ if(pid&&me){history.replaceState(null,'','/');V='payresult';D.pr={status:'pending'};render();pollPay(pid)}
+})();
+</script></body></html>
