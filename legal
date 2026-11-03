@@ -1,0 +1,110 @@
+'use strict';
+/**
+ * Terms, Privacy, Safety and Contact pages, rendered by the server so the business name,
+ * support address and jurisdiction come from .env. Plain English, matching what the software really does.
+ * These are working templates, not legal advice: have a lawyer in your country review them,
+ * then set LEGAL_REVIEWED=true in .env (until then each page shows a draft notice).
+ */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const UPDATED = '31 October 2026';
+
+function shell(cfg, title, body) {
+  const draft = cfg.reviewed ? '' : '<div class="draft">Draft text: this page has not yet been reviewed by a lawyer. The site owner must review it before launch.</div>';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title)} · ${esc(cfg.name)}</title><meta name="robots" content="index,follow">
+<style>
+:root{--mr:#7b1030;--gd:#b88a2e;--bg:#fbf5ec;--cd:#fff;--ink:#2b1a20;--mu:#7a6a6e;--ln:#eadfd2}
+@media(prefers-color-scheme:dark){:root{--bg:#1a0f13;--cd:#26161c;--ink:#f5ece6;--mu:#b9a7ab;--ln:#3b2630;--mr:#d4688a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+header{border-bottom:1px solid var(--ln);padding:12px 18px}header a{color:var(--mr);font:700 20px Georgia,serif;text-decoration:none}
+main{max-width:760px;margin:0 auto;padding:24px 18px 48px}h1{font:700 32px Georgia,serif;color:var(--mr);margin:.2em 0}h2{font:700 20px Georgia,serif;margin:1.6em 0 .3em}
+p,li{color:var(--ink)}.mu{color:var(--mu);font-size:14px}ul{padding-inline-start:22px}a{color:var(--mr)}
+.draft{background:#f4e7c8;color:#5b3d06;border-radius:10px;padding:10px 14px;margin:12px 0}
+nav.f{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;padding:18px;border-top:1px solid var(--ln);font-size:14px}
+</style></head><body><header><a href="/">${esc(cfg.name)}</a></header><main>${draft}<h1>${esc(title)}</h1><p class="mu">Last updated ${UPDATED}</p>${body}</main>
+<nav class="f"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/safety">Safety tips</a><a href="/contact">Contact</a></nav></body></html>`;
+}
+
+const mail = cfg => cfg.email ? `<a href="mailto:${esc(cfg.email)}">${esc(cfg.email)}</a>` : 'the contact details on our Contact page';
+
+function terms(c) {
+  return shell(c, 'Terms and Conditions', `
+<p>These terms are an agreement between you and ${esc(c.name)} ("we", "us"). By creating a profile or paying for a membership you accept them. If you do not accept them, please do not use the service.</p>
+<h2>1. Who can use the service</h2><p>You must be at least 18 years old and legally free to marry. You must give true information about yourself and keep it up to date. One person may hold one account, and may create a profile only for themselves.</p>
+<h2>2. What we provide</h2><p>${esc(c.name)} is a platform that lets adults who are looking for marriage find each other, and lets approved brokers introduce clients. We do not promise that you will find a match, and we are not a party to any arrangement between members.</p>
+<h2>3. Signing in</h2><p>You sign in with your Google or Apple account. You are responsible for keeping that account secure. Tell us at once if you think someone else is using your account.</p>
+<h2>4. Membership and payment</h2>
+<ul><li>A profile becomes active only after a membership payment is confirmed by our payment provider, Moyasar. Cards (mada, Visa, Mastercard) are accepted. We never see or store your card number.</li>
+<li>Prices and the length of each plan are shown at checkout in Saudi riyals (SAR) before you pay.</li>
+<li>When a payment is confirmed your membership starts straight away. If you pay while a membership is still running, the new period is added to the end of it.</li>
+<li>Memberships do not renew automatically. Nothing is charged again unless you choose to pay again.</li>
+<li>If you believe you were charged by mistake, or you want a refund, write to ${mail(c)} with the date and amount. We decide each request fairly. When a payment is refunded, the membership time that payment bought ends.</li></ul>
+<h2>5. How to behave</h2><p>You must not: harass, threaten or pressure anyone; ask another member for money or financial details; pretend to be someone else; post a photo of another person; post anything unlawful, hateful or sexual; use the service for anything other than finding a spouse; collect other members' details or copy profiles; or try to get around our safety tools.</p>
+<h2>6. Safety, reports and our decisions</h2><p>Any member can block or report another member. An administrator reads reports (including, for chat reports, the last 20 messages of the conversation) and may dismiss the report, send a warning, or suspend the account. If we act against you, we tell you, and you may appeal from inside the site. A different administrator reviews every appeal. We may also remove content, or refuse or end an account, where this is needed to keep members safe or to follow the law.</p>
+<h2>7. Verification badges</h2><p>A "Verified" badge means our team checked the items shown (identity, photo, background) at the time. It is not a guarantee of anyone's character or honesty. Meet in public, bring family, and read our <a href="/safety">safety tips</a>.</p>
+<h2>8. Brokers</h2><p>Brokers listed as Verified have been reviewed by our team. They are independent and are not our employees. Any fee a broker agrees with you is between you and the broker.</p>
+<h2>9. Your profile and photos</h2><p>You keep ownership of what you post. You allow us to show your profile to other active members, as described in the <a href="/privacy">Privacy Policy</a>. Your photo is hidden unless you choose to show it to members. You may change or remove it at any time.</p>
+<h2>10. Ending your account</h2><p>You can delete your account at any time from Settings. We do not refund the unused part of a membership when you delete, unless the law requires it. We may suspend or end an account that breaks these terms.</p>
+<h2>11. Limits of our responsibility</h2><p>The service is provided as it is. We do not check every statement members make and we are not responsible for what members say or do, online or in person. To the extent the law allows, we are not liable for indirect or consequential loss, and our total liability to you is limited to the amount you paid us in the 12 months before the claim. Nothing here limits any right you have that the law does not allow to be limited.</p>
+<h2>12. Changes</h2><p>We may update these terms. If a change matters, we will tell you on the site before it applies. Using the service after that means you accept the new terms.</p>
+<h2>13. Law</h2><p>These terms are governed by ${esc(c.juris)}.</p>
+<h2>14. Contact</h2><p>Questions about these terms: ${mail(c)}.</p>`);
+}
+
+function privacy(c) {
+  return shell(c, 'Privacy Policy', `
+<p>${esc(c.name)} ("we") respects your privacy. This page explains what we collect, why, who sees it, and the choices you have.</p>
+<h2>What we collect</h2><ul>
+<li><b>Sign-in details.</b> The name and email address from your Google or Apple account. We never receive your Google or Apple password.</li>
+<li><b>Your profile.</b> What you type: name, gender, age, city, marital status, education, occupation, "about you" and "looking for". Your agreement to these terms is recorded with the date.</li>
+<li><b>Your photo (optional).</b> Stored on our server. We remove the hidden camera data (such as location) embedded in the file.</li>
+<li><b>Messages</b> you send to members and brokers.</li>
+<li><b>Payment records.</b> The plan, amount, status and dates, and Moyasar's payment reference. Your card number is entered on Moyasar's secure form and never reaches our server.</li>
+<li><b>Safety records.</b> Reports, warnings, appeals and the actions administrators take, kept in an audit log.</li>
+<li><b>Technical data.</b> A sign-in cookie that keeps you logged in for up to 7 days, and your language choice stored in your browser. We do not use advertising or tracking cookies.</li></ul>
+<h2>How we use it</h2><p>To run your account, show your profile to other members, let members and brokers talk, take and confirm payments, keep members safe, prevent fraud, answer your requests, and meet legal duties. We do not sell your information and we do not use it for advertising.</p>
+<h2>Who can see what</h2><ul>
+<li><b>Other members</b> who have an active membership can see your name, age, city, occupation, education, marital status, your two text answers, and your verification badges. They never see your email address. They see your photo only if you chose to show it to members.</li>
+<li><b>Brokers</b> see what a member shares with them in chat.</li>
+<li><b>Our administrators</b> can see accounts, payments and reports, and read a conversation only when it has been reported. Their actions are logged.</li>
+<li><b>Moyasar</b> (payment processor) receives the payment details you enter and the amount. See its own privacy policy.</li>
+<li><b>Google and Apple</b> process your sign-in.</li>
+<li>We may share information with authorities when the law requires it.</li></ul>
+<h2>How long we keep it</h2><ul>
+<li>Your profile, photo, messages and settings stay until you delete your account.</li>
+<li>When you delete your account we erase them from the live service straight away. Payment records are kept in a form that no longer shows your email, because accounting rules require us to keep them. Safety records (reports, audit log) may be kept so that we can protect other members.</li>
+<li>Encrypted backups of the whole database are kept for a limited time (${esc(c.backupDays)} days) and then deleted. Your deleted data can remain inside those backups until they expire.</li></ul>
+<h2>Your choices</h2><ul><li><b>See and download</b> your data: Settings, then "Download my data".</li>
+<li><b>Correct</b> your profile: Profile, then "Edit".</li>
+<li><b>Control your photo:</b> hide it, show it to members, or remove it, in Settings.</li>
+<li><b>Delete</b> your account and data: Settings, then "Delete my account".</li>
+<li>For any other request, or to complain, write to ${mail(c)}.</li></ul>
+<h2>Security</h2><p>Connections use HTTPS. Sessions use a secure cookie. Database backups are encrypted. No system is perfectly secure, so please also protect your Google or Apple account.</p>
+<h2>Children</h2><p>The service is only for adults aged 18 or over. If we learn that someone under 18 has a profile, we will remove it.</p>
+<h2>Changes</h2><p>If we change this policy in a way that matters, we will tell you on the site.</p>
+<h2>Contact</h2><p>${esc(c.name)} · ${mail(c)}</p>`);
+}
+
+function safety(c) {
+  return shell(c, 'Safety tips', `
+<p>Most members are sincere. These habits protect you from the few who are not.</p>
+<h2>Before you meet</h2><ul><li>Keep the conversation on the site until you trust the person. Do not give your phone number, address, workplace or family details too early.</li>
+<li>Look for the <b>Verified</b> badge, but remember it is not a guarantee.</li>
+<li>Involve your family early. Ask them to speak to the family of the person you are talking to.</li>
+<li>Ask questions and notice if the answers change.</li></ul>
+<h2>Never send money</h2><p>Do not send money, gift cards or bank or card details to anyone you have not met in person with your family, whatever the reason. Requests for help with a visa, an emergency, a ticket, or an "investment" are the most common scams. <b>Report them.</b></p>
+<h2>When you meet</h2><ul><li>Meet in a public place, in daylight, with a family member present or close by.</li><li>Tell someone where you are going.</li><li>Arrange your own transport.</li></ul>
+<h2>Warning signs</h2><ul><li>Pressure to move off the site, or to decide quickly.</li><li>A profile that seems too perfect, or photos that look like a model's.</li><li>Refusing to talk on a call or meet.</li><li>Talk of money, gold, or "customs fees".</li></ul>
+<h2>Use the tools</h2><p>You can <b>block</b> or <b>report</b> any member or broker from search results, a broker page, or inside a chat. Reports are reviewed by our team. The person is not told who reported them.</p>
+<p>If you are in danger, contact your local emergency services first.</p>`);
+}
+
+function contact(c) {
+  return shell(c, 'Contact us', `
+<p>${c.email ? `Write to us at ${mail(c)}.` : 'The site owner has not published a contact address yet.'}</p>
+<h2>What to include</h2><ul><li>The email address you sign in with.</li><li>For a payment question: the date and amount.</li><li>For a safety concern: please also use the Report button on the member, so our team sees it.</li></ul>
+<h2>Account requests</h2><p>You can download your data, edit your profile and delete your account yourself in Settings, once you are signed in.</p>
+<p class="mu">Operated by ${esc(c.name)}.</p>`);
+}
+
+module.exports = { terms, privacy, safety, contact };
