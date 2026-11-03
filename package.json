@@ -6,8 +6,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node Server.js",
-    "backup": "node backup.js"
+    "start": "node start.js",
+    "backup": "node backup.js",
+    "test": "node --test",
+    "check-env": "node check-env.js"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.0",
