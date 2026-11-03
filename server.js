@@ -28,16 +28,17 @@ const BK = { on: E.BACKUP_ENABLED === 'true', dir: path.resolve(E.BACKUP_DIR || 
 if (BK.on && !/^[0-9a-f]{64}$/i.test(E.BACKUP_KEY || '')) { console.error('BACKUP_ENABLED is true but BACKUP_KEY is missing. Generate one with: openssl rand -hex 32'); process.exit(1); }
 const CUR = E.CURRENCY || 'SAR';
 // Moyasar. The publishable key may reach the browser; the secret key and webhook secret never leave this server.
-const MZ = { base: 'https://api.moyasar.com/v1', pk: E.MOYASAR_PUBLISHABLE_KEY, sk: E.MOYASAR_SECRET_KEY, hook: E.MOYASAR_WEBHOOK_SECRET };
+const MZ = { base: (E.NODE_ENV !== 'production' && E.MOYASAR_API_BASE) || 'https://api.moyasar.com/v1', // the override exists only for automated tests and is ignored in production
+  pk: E.MOYASAR_PUBLISHABLE_KEY, sk: E.MOYASAR_SECRET_KEY, hook: E.MOYASAR_WEBHOOK_SECRET };
 const mzMode = (k, kind) => (new RegExp('^' + kind + '_(test|live)_[A-Za-z0-9_-]{10,}$').exec(k || '') || [])[1];
 MZ.mode = mzMode(MZ.pk, 'pk');
 if (!MZ.mode || mzMode(MZ.sk, 'sk') !== MZ.mode) { console.error('MOYASAR_PUBLISHABLE_KEY must start with pk_test_ or pk_live_, and MOYASAR_SECRET_KEY with sk_test_ or sk_live_ of the SAME mode.'); process.exit(1); }
 if (String(MZ.hook).length < 16) { console.error('MOYASAR_WEBHOOK_SECRET must be at least 16 characters (openssl rand -hex 24).'); process.exit(1); }
 if (MZ.mode === 'test') console.warn('Moyasar is in TEST mode: no real money will move.');
 const PLANS = { // prices live on the server only; the browser sends just the plan id
-  basic: { name: 'Basic Plan', price: 29, months: 1 },
-  prem: { name: 'Premium Plan', price: 69, months: 3 },
-  plus: { name: 'Premium Plus', price: 119, months: 6 },
+  basic: { name: 'Basic Plan', price: 29, months: 1, features: ['View trusted profiles', 'Send limited messages', 'Basic search'] },
+  prem: { name: 'Premium Plan', price: 69, months: 3, features: ['View all profiles', 'Unlimited messages', 'Profile highlights'] },
+  plus: { name: 'Premium Plus', price: 119, months: 6, features: ['All Premium features', 'Priority broker support', 'Verified badge boost'] },
 };
 const admins = new Set((E.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
 
@@ -48,7 +49,7 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS users(email TEXT PRIMARY KEY, name TEXT, provider TEXT, profile_json TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS payments(
   id TEXT PRIMARY KEY, email TEXT NOT NULL, plan TEXT NOT NULL, amount REAL NOT NULL, currency TEXT NOT NULL,
-  status TEXT NOT NULL, tran_ref TEXT, refund_ref TEXT, created_at TEXT, paid_at TEXT, refunded_at TEXT);
+  status TEXT NOT NULL, tran_ref TEXT, refund_ref TEXT, created_at TEXT, paid_at TEXT, refunded_at TEXT, period_from TEXT, period_to TEXT);
 CREATE INDEX IF NOT EXISTS pay_ref ON payments(tran_ref);
 CREATE TABLE IF NOT EXISTS memberships(email TEXT PRIMARY KEY, plan TEXT, expires_at TEXT);
 CREATE TABLE IF NOT EXISTS verification(email TEXT PRIMARY KEY, identity INTEGER DEFAULT 0, photo INTEGER DEFAULT 0, background INTEGER DEFAULT 0, revoked_at TEXT, updated_at TEXT);
@@ -82,8 +83,14 @@ const now = () => new Date().toISOString();
 // Sign in with Apple: Apple's stable per-app user id, so a returning member is found even if Apple stops sending the email.
 if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === 'apple_sub')) db.exec('ALTER TABLE users ADD COLUMN apple_sub TEXT');
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_apple ON users(apple_sub) WHERE apple_sub IS NOT NULL');
+for (const c of ['period_from', 'period_to']) if (!db.prepare('PRAGMA table_info(payments)').all().some(r => r.name === c)) db.exec('ALTER TABLE payments ADD COLUMN ' + c + ' TEXT');
 if (!db.prepare('PRAGMA table_info(reports)').all().some(c => c.name === 'source')) db.exec('ALTER TABLE reports ADD COLUMN source TEXT');
-const addMonths = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + m); return x; };
+const addMonths = (d, m) => { // calendar months in UTC, clamped to the end of a short month (31 Jan + 1 month = 28/29 Feb, never 3 Mar)
+  const x = new Date(d), day = x.getUTCDate();
+  x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + m);
+  x.setUTCDate(Math.min(day, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate()));
+  return x;
+};
 
 /* ---------- Moyasar client (secret key, server only) ---------- */
 async function mzCall(method, endpoint, body) {
@@ -108,6 +115,7 @@ const settle = db.transaction((p, ref) => {
   const m = db.prepare('SELECT expires_at FROM memberships WHERE email=?').get(p.email);
   const base = m && new Date(m.expires_at) > new Date() ? new Date(m.expires_at) : new Date();
   const exp = addMonths(base, PLANS[p.plan].months).toISOString();
+  db.prepare('UPDATE payments SET period_from=?, period_to=? WHERE id=?').run(base.toISOString(), exp, p.id); // remembered so a refund can take back exactly this time
   db.prepare('INSERT INTO memberships(email,plan,expires_at) VALUES(?,?,?) ON CONFLICT(email) DO UPDATE SET plan=excluded.plan, expires_at=excluded.expires_at').run(p.email, p.plan, exp);
   // Automatic approval: a confirmed payment also approves a member who was waiting for review (REQUIRE_APPROVAL=true).
   // A suspended member is never changed by paying.
@@ -125,7 +133,11 @@ const markRefunded = db.transaction((origRef, refundRef) => {
   if (!p || p.status === 'refunded') return;
   db.prepare("UPDATE payments SET status='refunded', refund_ref=?, refunded_at=? WHERE id=?").run(refundRef, now(), p.id);
   const m = db.prepare('SELECT expires_at FROM memberships WHERE email=?').get(p.email);
-  if (m) db.prepare('UPDATE memberships SET expires_at=? WHERE email=?').run(addMonths(m.expires_at, -PLANS[p.plan].months).toISOString(), p.email);
+  if (m) { // take back exactly the time this payment added (later renewals keep their own time)
+    const delta = p.period_from && p.period_to ? new Date(p.period_to) - new Date(p.period_from) : null;
+    const left = delta != null ? new Date(new Date(m.expires_at) - delta) : addMonths(m.expires_at, -PLANS[p.plan].months);
+    db.prepare('UPDATE memberships SET expires_at=? WHERE email=?').run(left.toISOString(), p.email);
+  }
 });
 
 /** Never trust a redirect or a webhook body. Take only the payment id, fetch the real payment from Moyasar with the secret key,
@@ -157,12 +169,16 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: { directives: {
   defaultSrc: ["'self'"],
   // 'unsafe-inline' is needed only because the prototype keeps its script inline. Move it to a file and remove this.
-  scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://appleid.cdn-apple.com', 'https://cdn.moyasar.com'],
+  scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://accounts.google.com', 'https://appleid.cdn-apple.com', 'https://cdn.moyasar.com'],
   styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com', 'https://cdn.moyasar.com'],
   fontSrc: ['https://fonts.gstatic.com', 'https://*.moyasar.com'], imgSrc: ["'self'", 'data:', 'https://*.moyasar.com'],
   frameSrc: ['https://accounts.google.com', 'https://appleid.apple.com', 'https://*.moyasar.com'], connectSrc: ["'self'", 'https://accounts.google.com', 'https://appleid.apple.com', 'https://api.moyasar.com'],
   formAction: ["'self'", 'https://*.moyasar.com', 'https://appleid.apple.com'],
-} } }));
+  scriptSrcAttr: ["'unsafe-inline'"], // the page uses onclick="..." handlers; helmet's default ('none') would silently disable every button
+  upgradeInsecureRequests: E.NODE_ENV === 'production' ? [] : null, // only meaningful on https; plain-http local testing must keep working
+}, },
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // Google and Apple sign-in talk to the page from a popup; the default 'same-origin' would cut that link
+} ));
 app.use(cookieParser());
 
 // Webhook first: no cookies and no CSRF header (Moyasar calls it). Set the same secret in the Moyasar dashboard webhook.
@@ -191,7 +207,7 @@ app.get('/payment/return/:cart', returnLimit, async (req, res) => {
 });
 
 app.use(express.json({ limit: '50kb' }));
-app.use('/api/', rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: true, legacyHeaders: false }));
+app.use('/api/', rateLimit({ windowMs: 60_000, limit: Number(E.API_RATE_LIMIT) || 60, standardHeaders: true, legacyHeaders: false }));
 
 const csrf = (req, res, next) => req.get('x-requested-with') === 'fetch' ? next() : res.status(403).json({ error: 'Bad request' });
 function issue(res, email) {
@@ -216,7 +232,7 @@ const google = new OAuth2Client(E.GOOGLE_CLIENT_ID);
 app.post('/api/auth/google', csrf, wrap(async (req, res) => {
   let p;
   try { p = (await google.verifyIdToken({ idToken: String(req.body.credential || ''), audience: E.GOOGLE_CLIENT_ID })).getPayload(); }
-  catch { return res.status(401).json({ error: 'Google sign-in failed' }); }
+  catch (e) { console.error('Google sign-in rejected:', e.message, '(check GOOGLE_CLIENT_ID matches the Web client used by the site)'); return res.status(401).json({ error: 'Google sign-in failed. The site owner can see the reason in the server log.' }); }
   if (!p.email || !p.email_verified) return res.status(401).json({ error: 'Email not verified' });
   const email = p.email.toLowerCase();
   db.prepare("INSERT INTO users(email,name,provider,created_at) VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").run(email, p.name || '', 'google', now());
@@ -237,7 +253,7 @@ app.post('/api/auth/apple', csrf, wrap(async (req, res) => {
   if (!E.APPLE_CLIENT_ID) return res.status(503).json({ error: 'Apple sign-in is not configured' });
   let c, n;
   try { c = (await jwtVerify(String((req.body && req.body.id_token) || ''), appleKeys, { issuer: 'https://appleid.apple.com', audience: E.APPLE_CLIENT_ID, algorithms: ['RS256'] })).payload; }
-  catch { return res.status(401).json({ error: 'Apple sign-in failed' }); }
+  catch (e) { console.error('Apple sign-in rejected:', e.message, '(check APPLE_CLIENT_ID is the Services ID)'); return res.status(401).json({ error: 'Apple sign-in failed. The site owner can see the reason in the server log.' }); }
   try { n = jwt.verify(req.cookies.rcg_nonce || '', E.JWT_SECRET).n; } catch { return res.status(401).json({ error: 'Sign-in expired. Please try again.' }); }
   if (c.nonce !== n && c.nonce !== crypto.createHash('sha256').update(n).digest('hex')) return res.status(401).json({ error: 'Apple sign-in failed' }); // replayed or foreign token
   res.clearCookie('rcg_nonce');
@@ -263,7 +279,8 @@ const membership = email => {
 app.get('/api/me', auth, (req, res) => res.json({
   email: req.user.email, name: req.user.name, isAdmin: admins.has(req.user.email),
   profile: req.user.profile_json ? JSON.parse(req.user.profile_json) : null, membership: membership(req.user.email), verification: vstate(req.user.email), status: req.user.status, broker: binfo(req.user.email),
-  unread: unreadCount(req.user.email), warnings: activeWarnings(req.user.email), appeal: openAppeals(req.user.email),
+  photo: (r => r ? { has: true, visible: !!r.visible } : { has: false, visible: false })(db.prepare('SELECT visible FROM photos WHERE email=?').get(req.user.email)),
+  consent: !!req.user.consent_at, unread: unreadCount(req.user.email), warnings: activeWarnings(req.user.email), appeal: openAppeals(req.user.email),
 }));
 
 /* --- profile: payment unlocks only after a valid profile exists --- */
@@ -272,7 +289,9 @@ app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, age = parseInt(b.a, 10);
   const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300) };
   if (!(age >= 18 && age <= 70) || !prof.n || !prof.c || !prof.e || !prof.j || !prof.x || !prof.w) return res.status(400).json({ error: 'Complete every field. Age must be 18 to 70.' });
-  db.prepare('UPDATE users SET profile_json=? WHERE email=?').run(JSON.stringify(prof), req.user.email);
+  if (!['Never married', 'Divorced', 'Widowed'].includes(prof.m)) prof.m = 'Never married';
+  if (!req.user.consent_at && b.agree !== true) return res.status(400).json({ error: 'Please accept the Terms and the Privacy Policy to continue.' });
+  db.prepare('UPDATE users SET profile_json=?, consent_at=COALESCE(consent_at,?) WHERE email=?').run(JSON.stringify(prof), now(), req.user.email);
   db.prepare('INSERT OR IGNORE INTO verification(email,updated_at) VALUES(?,?)').run(req.user.email, now());
   if (E.REQUIRE_APPROVAL === 'true') db.prepare("INSERT OR IGNORE INTO member_status(email,status,updated_at) VALUES(?,'pending',?)").run(req.user.email, now()); // new profiles wait for an admin
   res.json({ ok: true });
@@ -323,7 +342,7 @@ app.post('/api/admin/payments/:id/refund', auth, adminOnly, csrf, wrap(async (re
 }));
 
 /* --- public config (the Google client id is public by design) --- */
-app.get('/api/config', (req, res) => res.json({ paymentMode: MZ.mode, googleClientId: E.GOOGLE_CLIENT_ID, appleClientId: E.APPLE_CLIENT_ID || null, appleRedirectUri: E.APPLE_REDIRECT_URI || null }));
+app.get('/api/config', (req, res) => res.json({ paymentMode: MZ.mode, googleClientId: E.GOOGLE_CLIENT_ID, appleClientId: E.APPLE_CLIENT_ID || null, appleRedirectUri: E.APPLE_REDIRECT_URI || null, baseUrl: E.BASE_URL.replace(/\/+$/, ''), googleOk: /\.apps\.googleusercontent\.com$/.test(E.GOOGLE_CLIENT_ID), supportEmail: E.SUPPORT_EMAIL || null, businessName: E.BUSINESS_NAME || 'Rishta Connect Global' }));
 
 /* --- verification helpers --- */
 const CHECKS = { identity: 'identity', photo: 'photo', background: 'background' }; // whitelist: only these column names reach SQL
@@ -341,20 +360,27 @@ const byUid = uid => { const r = db.prepare('SELECT email FROM uid_map WHERE uid
 const audit = (admin, action, ref, reason) => db.prepare('INSERT INTO audit(admin,action,payment_id,reason,at) VALUES(?,?,?,?,?)').run(admin, action, ref, reason || null, now());
 
 /* --- member search: only members with an active paid membership may browse --- */
+const PAGE = 12;
 app.get('/api/members', auth, wrap(async (req, res) => {
   if (!membership(req.user.email).active) return res.status(403).json({ error: 'Activate your profile with a membership to search members.' });
-  const q = req.query, lo = parseInt(q.lo, 10) || 18, hi = parseInt(q.hi, 10) || 70, city = String(q.c || '').toLowerCase().slice(0, 40);
-  const rows = db.prepare('SELECT u.email,u.profile_json FROM users u JOIN memberships m ON m.email=u.email WHERE m.expires_at>? AND u.profile_json IS NOT NULL AND u.email<>?').all(now(), req.user.email);
-  res.json(rows.map(r => ({ email: r.email, p: JSON.parse(r.profile_json) }))
+  if (mstatus(req.user.email) !== 'approved') return res.status(403).json({ error: 'Your profile is awaiting approval.' });
+  const q = req.query, lo = parseInt(q.lo, 10) || 18, hi = parseInt(q.hi, 10) || 70, like = k => String(q[k] || '').toLowerCase().slice(0, 40);
+  const city = like('c'), edu = like('e'), job = like('j'), page = Math.max(1, parseInt(q.page, 10) || 1);
+  const rows = db.prepare('SELECT u.email,u.profile_json FROM users u JOIN memberships m ON m.email=u.email WHERE m.expires_at>? AND u.profile_json IS NOT NULL AND u.email<>? ORDER BY u.created_at DESC').all(now(), req.user.email);
+  const hit = rows.map(r => ({ email: r.email, p: JSON.parse(r.profile_json) }))
     .filter(({ email }) => mstatus(email) === 'approved' && !isBlocked(req.user.email, email))
-    .filter(({ p }) => (!q.g || p.g === q.g) && p.a >= lo && p.a <= hi && (!city || p.c.toLowerCase().includes(city)))
-    .map(({ email, p }) => ({ id: opaque(email), n: p.n, g: p.g, a: p.a, c: p.c, j: p.j, x: p.x, verified: vstate(email).verified })));
+    .filter(({ p }) => (!q.g || p.g === q.g) && (!q.m || p.m === q.m) && p.a >= lo && p.a <= hi && (!city || p.c.toLowerCase().includes(city)) && (!edu || p.e.toLowerCase().includes(edu)) && (!job || p.j.toLowerCase().includes(job)))
+    .map(h => ({ ...h, v: vstate(h.email).verified }))
+    .sort((a, b) => (b.v ? 1 : 0) - (a.v ? 1 : 0)); // verified members first; newest first within each group (stable sort)
+  const slice = hit.slice((page - 1) * PAGE, page * PAGE), sl = new Set(db.prepare('SELECT target FROM shortlist WHERE owner=?').all(req.user.email).map(r => r.target));
+  res.json({ total: hit.length, page, pages: Math.max(1, Math.ceil(hit.length / PAGE)),
+    rows: slice.map(({ email, p, v }) => ({ id: opaque(email), n: p.n, g: p.g, a: p.a, c: p.c, m: p.m, j: p.j, x: p.x, verified: v, ph: !!db.prepare('SELECT 1 FROM photos WHERE email=? AND visible=1').get(email), sl: sl.has(email) })) });
 }));
 
 /* --- admin: verification queue --- */
 app.get('/api/admin/verification', auth, adminOnly, (req, res) => {
   const rows = db.prepare('SELECT email,name FROM users WHERE profile_json IS NOT NULL ORDER BY created_at DESC').all();
-  res.json(rows.map(u => ({ email: u.email, name: u.name, ...vstate(u.email) })));
+  res.json(rows.map(u => ({ email: u.email, name: u.name, has_photo: !!db.prepare('SELECT 1 FROM photos WHERE email=?').get(u.email), ...vstate(u.email) })));
 });
 const target = (req, res) => { // the member must exist and have a profile
   const u = db.prepare('SELECT email FROM users WHERE email=? AND profile_json IS NOT NULL').get(String(req.params.email || '').toLowerCase());
@@ -805,5 +831,22 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
   r.ok ? res.json({ ok: true, stamp: r.stamp }) : res.status(500).json({ error: 'Backup failed: ' + r.error });
 }));
 
+require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, whoIs, PLANS, CUR, admins });
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
+app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
 app.use(express.static(path.join(__dirname, 'public'))); // put the website's index.html in ./public
-app.listen(Number(E.PORT) || 3000, () => console.log('Rishta Connect Global listening on ' + (E.PORT || 3000)));
+app.use((err, req, res, next) => { // body too large, bad JSON, and anything unexpected: a short JSON answer, never a stack trace
+  if (res.headersSent) return next(err);
+  const code = err.status === 413 ? 413 : err.status >= 400 && err.status < 500 ? err.status : 500;
+  if (code === 500) console.error(err && err.message);
+  res.status(code).json({ error: code === 413 ? 'That upload is too large.' : code === 500 ? 'Something went wrong. Try again.' : 'Bad request' });
+});
+require('./persist').attach(db);
+const server = app.listen(Number(E.PORT) || 3000, () => console.log('Rishta Connect Global listening on ' + (E.PORT || 3000)));
+function shutdown(sig) { // let in-flight requests (and a running backup) finish, then close the database cleanly
+  console.log(sig + ' received, shutting down');
+  server.close(() => { require('./persist').flush().catch(() => {}).finally(() => { try { db.close(); } catch { /* already closed */ } process.exit(0); }); });
+  setTimeout(() => process.exit(1), 15_000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
