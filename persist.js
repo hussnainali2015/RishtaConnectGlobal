@@ -45,19 +45,36 @@ const hdr = extra => {
 };
 const tmpFile = n => path.join(os.tmpdir(), `rcg-persist-${process.pid}-${n}`);
 
+function whyFetchFailed(e) {
+  const c = e && e.cause, code = c && (c.code || c.name), msg = c && c.message ? c.message : '';
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'the address does not exist (' + code + '). PERSIST_SUPABASE_URL is mistyped. It must be exactly https://YOURPROJECT.supabase.co';
+  if (code === 'ECONNREFUSED' || code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') return 'could not connect (' + code + '). Supabase may be paused or unreachable. Open the Supabase dashboard and press Restore if the project is paused.';
+  if (/header/i.test(msg) || code === 'ERR_INVALID_CHAR') return 'PERSIST_SUPABASE_KEY contains a character that is not allowed in a key (a space, new line or a non-English character). Copy the secret key again, whole and by itself.';
+  return (code || 'unknown reason') + (msg ? ': ' + msg.slice(0, 120) : '');
+}
+async function web(url, opts) {
+  try { return await fetch(url, opts); } catch (e) { throw new Error('Cannot reach Supabase: ' + whyFetchFailed(e)); }
+}
+function checkSettings() {
+  const u = E.PERSIST_SUPABASE_URL, k = E.PERSIST_SUPABASE_KEY;
+  if (E.NODE_ENV !== 'test' && !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(base())) return 'PERSIST_SUPABASE_URL is not valid. It must look like https://abcdefgh.supabase.co (starts with https://, no spaces, nothing after .supabase.co). What the server received starts with: "' + String(u).slice(0, 12) + '" and is ' + String(u).length + ' characters long.';
+  if (!k || /[^\x21-\x7e]/.test(k)) return 'PERSIST_SUPABASE_KEY is empty or has a space or odd character inside. Paste the whole secret key by itself.';
+  if (/^(sb_publishable_)/.test(k)) return 'PERSIST_SUPABASE_KEY is the PUBLISHABLE key. Use the SECRET key (starts with sb_secret_).';
+  return '';
+}
 async function ensureBucket() {
-  const r = await fetch(`${base()}/storage/v1/bucket`, { method: 'POST', headers: hdr({ 'content-type': 'application/json' }), body: JSON.stringify({ id: BUCKET, name: BUCKET, public: false }) });
+  const r = await web(`${base()}/storage/v1/bucket`, { method: 'POST', headers: hdr({ 'content-type': 'application/json' }), body: JSON.stringify({ id: BUCKET, name: BUCKET, public: false }) });
   if (r.ok) return;
   const t = await r.text();
   if (r.status === 409 || /already exists|Duplicate/i.test(t)) return;
   throw new Error(`cannot prepare storage bucket (${r.status}): ${t.slice(0, 160)}`);
 }
 async function put(name, file) {
-  const r = await fetch(`${base()}/storage/v1/object/${BUCKET}/${name}`, { method: 'POST', headers: hdr({ 'x-upsert': 'true', 'content-type': 'application/octet-stream' }), body: fs.readFileSync(file) });
+  const r = await web(`${base()}/storage/v1/object/${BUCKET}/${name}`, { method: 'POST', headers: hdr({ 'x-upsert': 'true', 'content-type': 'application/octet-stream' }), body: fs.readFileSync(file) });
   if (!r.ok) throw new Error(`upload ${name} failed (${r.status}): ${(await r.text()).slice(0, 160)}`);
 }
 async function get(name) { // Buffer, or null when the file does not exist
-  const r = await fetch(`${base()}/storage/v1/object/${BUCKET}/${name}`, { headers: hdr() });
+  const r = await web(`${base()}/storage/v1/object/${BUCKET}/${name}`, { headers: hdr() });
   if (r.ok) return Buffer.from(await r.arrayBuffer());
   const t = await r.text();
   if (r.status === 404 || (r.status === 400 && /not.?found/i.test(t))) return null;
@@ -67,7 +84,7 @@ async function get(name) { // Buffer, or null when the file does not exist
 /** Call before the server opens the database. */
 async function restore() {
   if (!on()) return 'off';
-  const kp = keyProblem(); if (kp) throw new Error(kp);
+  const kp = keyProblem() || checkSettings(); if (kp) throw new Error(kp);
   if (fs.existsSync(dbFile())) return 'local database present';
   await ensureBucket();
   const buf = await get('latest.db.enc');
