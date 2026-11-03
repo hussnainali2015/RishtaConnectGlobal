@@ -13,6 +13,26 @@ const path = require('path');
 const { encryptFile, decryptFile } = require('./backup-lib');
 
 const E = process.env;
+/** Pasted values often carry a stray space, a new line, quotes, or the "NAME=" prefix. Clean those off before anything reads them. */
+function cleanEnv() {
+  for (const k of ['BACKUP_KEY', 'PERSIST_SUPABASE_URL', 'PERSIST_SUPABASE_KEY', 'PERSIST_BUCKET']) {
+    let v = E[k]; if (typeof v !== 'string') continue;
+    v = v.replace(/[\u200b-\u200f\u2060\ufeff]/g, '').trim();
+    if (v.toUpperCase().startsWith(k + '=')) v = v.slice(k.length + 1).trim();
+    v = v.replace(/^["'\u201c\u2018]+|["'\u201d\u2019]+$/g, '').trim();
+    E[k] = v;
+  }
+}
+/** Says exactly what is wrong with BACKUP_KEY without ever printing the key itself. */
+function keyProblem() {
+  const v = E.BACKUP_KEY;
+  if (v === undefined) return 'BACKUP_KEY is not set at all on this server. Check the NAME in Render is exactly BACKUP_KEY (capital letters, underscore, no spaces) and that you pressed Save.';
+  if (v === '') return 'BACKUP_KEY exists but is empty. The Value box in Render has nothing in it.';
+  const bad = [...v].findIndex(c => !/[0-9a-fA-F]/.test(c));
+  if (bad >= 0) return `BACKUP_KEY has a character that is not 0-9 or a-f at position ${bad + 1} (code ${[...v][bad].codePointAt(0)}). Length is ${[...v].length}; it must be exactly 64. A letter like g-z, a bracket, or a dash is the usual cause.`;
+  if (v.length !== 64) return `BACKUP_KEY has ${v.length} characters; it must be exactly 64. ${v.length < 64 ? 'Part of it was cut off when pasting.' : 'Something extra was pasted with it.'}`;
+  return '';
+}
 const on = () => !!(E.PERSIST_SUPABASE_URL && E.PERSIST_SUPABASE_KEY);
 const BUCKET = E.PERSIST_BUCKET || 'rcg-data';
 const dbFile = () => E.DB_FILE || path.join(__dirname, 'rishta.db');
@@ -47,7 +67,7 @@ async function get(name) { // Buffer, or null when the file does not exist
 /** Call before the server opens the database. */
 async function restore() {
   if (!on()) return 'off';
-  if (!/^[0-9a-f]{64}$/i.test(E.BACKUP_KEY || '')) throw new Error('PERSIST needs BACKUP_KEY (64 hex characters) to encrypt the stored copy.');
+  const kp = keyProblem(); if (kp) throw new Error(kp);
   if (fs.existsSync(dbFile())) return 'local database present';
   await ensureBucket();
   const buf = await get('latest.db.enc');
@@ -92,4 +112,4 @@ async function flush() { // last upload before the process exits
   for (let i = 0; i < 20 && busy; i++) await new Promise(r => setTimeout(r, 250));
   await snapshot(true); // always upload on the way out
 }
-module.exports = { on, restore, attach, flush };
+module.exports = { on, restore, attach, flush, cleanEnv };
