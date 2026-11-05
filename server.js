@@ -834,6 +834,23 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
 require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, whoIs, PLANS, CUR, admins });
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
+const IMG_DIR = path.join(__dirname, 'public', 'img');
+const imgKey = n => String(n).toLowerCase().replace(/\.jpe?g$/, '.jpg'); // couple-hero.JPG, .jpg and .jpeg are all the same picture
+const imgFiles = () => { try { return require('fs').readdirSync(IMG_DIR); } catch { return []; } };
+app.get('/img-list', (req, res) => { // what is really in public/img on this server (names only), to debug a missing picture
+  const have = imgFiles(), want = ['couple-hero.JPG', 'couple-bg.JPG'];
+  res.set('Cache-Control', 'no-store').json({ folderFound: have.length > 0, files: have, expected: want.map(n => ({ name: n, exactMatch: have.includes(n), foundAs: have.find(f => imgKey(f) === imgKey(n)) || null })) });
+});
+app.get('/img/:name', (req, res, next) => { // picture names are matched without regard to capital letters, so .JPG, .jpg and .jpeg all work on a Linux host
+  const name = String(req.params.name || '');
+  if (!name || /[\\/]|\.\./.test(name)) return next();
+  const files = imgFiles(), hit = files.includes(name) ? name : files.find(f => imgKey(f) === imgKey(name));
+  if (!hit) return next();
+  const mt = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' }[hit.split('.').pop().toLowerCase()];
+  if (mt) res.set('Content-Type', mt);
+  res.set('Cache-Control', 'public, max-age=86400'); if (!mt) res.set('Content-Type', 'application/octet-stream');
+  const rs = require('fs').createReadStream(path.join(IMG_DIR, hit)); rs.on('error', () => { if (!res.headersSent) next(); else res.destroy(); }); rs.pipe(res);
+});
 app.use(express.static(path.join(__dirname, 'public'))); // put the website's index.html in ./public
 app.use((err, req, res, next) => { // body too large, bad JSON, and anything unexpected: a short JSON answer, never a stack trace
   if (res.headersSent) return next(err);
