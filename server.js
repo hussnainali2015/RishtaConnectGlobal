@@ -39,7 +39,11 @@ const PLANS = { // prices live on the server only; the browser sends just the pl
   basic: { name: 'Basic Plan', price: 29, months: 1, features: ['View trusted profiles', 'Send limited messages', 'Basic search'] },
   prem: { name: 'Premium Plan', price: 69, months: 3, features: ['View all profiles', 'Unlimited messages', 'Profile highlights'] },
   plus: { name: 'Premium Plus', price: 119, months: 6, features: ['All Premium features', 'Priority broker support', 'Verified badge boost'] },
+  // Founder Membership: Premium Plus at a lower price, only for the first FOUNDER_LIMIT accounts that sign up. Price and limit are set in the site settings.
+  founder: { name: 'Founder Membership', price: Number(E.FOUNDER_PRICE) > 0 ? Number(E.FOUNDER_PRICE) : 79, months: 6, founder: true,
+    features: ['All Premium Plus features', 'Founder price for the whole period', 'Founder badge on your profile'] },
 };
+const FOUNDER_LIMIT = Math.max(0, parseInt(E.FOUNDER_LIMIT, 10) || 100);
 const admins = new Set((E.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
 
 /* ---------- database ---------- */
@@ -47,6 +51,7 @@ const db = new Database(E.DB_FILE || path.join(__dirname, 'rishta.db'));
 db.pragma('journal_mode = WAL');
 db.exec(`
 CREATE TABLE IF NOT EXISTS users(email TEXT PRIMARY KEY, name TEXT, provider TEXT, profile_json TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS founders(email TEXT PRIMARY KEY, n INTEGER NOT NULL UNIQUE, claimed_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS payments(
   id TEXT PRIMARY KEY, email TEXT NOT NULL, plan TEXT NOT NULL, amount REAL NOT NULL, currency TEXT NOT NULL,
   status TEXT NOT NULL, tran_ref TEXT, refund_ref TEXT, created_at TEXT, paid_at TEXT, refunded_at TEXT, period_from TEXT, period_to TEXT);
@@ -92,6 +97,23 @@ CREATE TRIGGER IF NOT EXISTS audit_no_update BEFORE UPDATE ON audit BEGIN SELECT
 CREATE TRIGGER IF NOT EXISTS audit_no_delete BEFORE DELETE ON audit BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END;
 `);
 const now = () => new Date().toISOString();
+
+/* ---------- founder spots: the first FOUNDER_LIMIT accounts to sign up (admins do not count) ---------- */
+let founderDone = !FOUNDER_LIMIT; // becomes true once every spot is taken, so later requests skip the check
+const claimFounder = db.transaction(email => {
+  if (founderDone || admins.has(email)) return;
+  if (db.prepare('SELECT 1 FROM founders WHERE email=?').get(email)) return;
+  const n = db.prepare('SELECT COALESCE(MAX(n),0) m FROM founders').get().m + 1;
+  if (n <= FOUNDER_LIMIT) db.prepare('INSERT INTO founders(email,n,claimed_at) VALUES(?,?,?)').run(email, n, now());
+  if (n >= FOUNDER_LIMIT) founderDone = true;
+});
+if (FOUNDER_LIMIT && !db.prepare('SELECT 1 FROM founders LIMIT 1').get()) // site already had members before this feature: the oldest accounts get the first spots
+  for (const u of db.prepare('SELECT email FROM users ORDER BY rowid').all()) claimFounder(u.email);
+const founderState = email => {
+  const taken = db.prepare('SELECT COUNT(*) n FROM founders').get().n, mine = email && db.prepare('SELECT n FROM founders WHERE email=?').get(email);
+  return { limit: FOUNDER_LIMIT, left: Math.max(0, FOUNDER_LIMIT - taken), mine: mine ? mine.n : null };
+};
+const viewerEmail = req => { try { return jwt.verify(req.cookies.rcg_session || '', E.JWT_SECRET).email; } catch { return null; } };
 // Upgrade databases created before reports recorded where they came from.
 // Sign in with Apple: Apple's stable per-app user id, so a returning member is found even if Apple stops sending the email.
 if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === 'apple_sub')) db.exec('ALTER TABLE users ADD COLUMN apple_sub TEXT');
@@ -233,6 +255,7 @@ function auth(req, res, next) {
     const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
     if (!u) throw new Error('no user');
     u.status = mstatus(email);
+    claimFounder(email); // signing in counts: whoever arrives while spots remain gets one, in order
     if (u.status === 'suspended' && !/^\/api\/(me|notifications|appeals)(\/|\?|$)/.test(req.originalUrl)) return res.status(403).json({ error: 'Your account is suspended. Contact support for help.' });
     req.user = u; next();
   } catch { res.status(401).json({ error: 'Sign in required' }); }
@@ -249,6 +272,7 @@ app.post('/api/auth/google', csrf, wrap(async (req, res) => {
   if (!p.email || !p.email_verified) return res.status(401).json({ error: 'Email not verified' });
   const email = p.email.toLowerCase();
   db.prepare("INSERT INTO users(email,name,provider,created_at) VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").run(email, p.name || '', 'google', now());
+  claimFounder(email);
   issue(res, email); res.json({ ok: true });
 }));
 app.post('/api/auth/logout', csrf, (req, res) => { res.clearCookie('rcg_session'); res.json({ ok: true }); });
@@ -279,7 +303,7 @@ app.post('/api/auth/apple', csrf, wrap(async (req, res) => {
     u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
     if (u && u.apple_sub && u.apple_sub !== sub) return res.status(409).json({ error: 'This email is linked to a different Apple account.' });
     if (u) db.prepare('UPDATE users SET apple_sub=? WHERE email=?').run(sub, email); // same verified email as an existing member: same person
-    else { db.prepare('INSERT INTO users(email,name,provider,apple_sub,created_at) VALUES(?,?,?,?,?)').run(email, name, 'apple', sub, now()); u = { email }; }
+    else { db.prepare('INSERT INTO users(email,name,provider,apple_sub,created_at) VALUES(?,?,?,?,?)').run(email, name, 'apple', sub, now()); u = { email }; claimFounder(email); }
   }
   if (name) db.prepare("UPDATE users SET name=? WHERE email=? AND (name IS NULL OR name='')").run(name, u.email);
   issue(res, u.email); res.json({ ok: true });
@@ -315,6 +339,10 @@ app.post('/api/checkout', auth, csrf, wrap(async (req, res) => {
   const plan = PLANS[req.body && req.body.plan];
   if (!plan) return res.status(400).json({ error: 'Choose a plan' });
   if (!req.user.profile_json) return res.status(409).json({ error: 'Create your profile before paying' });
+  if (plan.founder) {
+    if (!founderState(req.user.email).mine) return res.status(403).json({ error: 'Founder Membership is only for the first ' + FOUNDER_LIMIT + ' members who signed up.' });
+    if (db.prepare("SELECT 1 FROM payments WHERE email=? AND plan='founder' AND status='paid'").get(req.user.email)) return res.status(409).json({ error: 'You already have the Founder Membership. Choose another plan to renew.' });
+  }
   const id = 'RC-' + crypto.randomUUID();
   db.prepare('INSERT INTO payments(id,email,plan,amount,currency,status,created_at) VALUES(?,?,?,?,?,?,?)').run(id, req.user.email, req.body.plan, plan.price, CUR, 'pending', now());
   // The card form runs in the browser with the publishable key. Everything the browser needs is returned here; the secret key is not.
@@ -846,7 +874,7 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
 }));
 
 require('./reviews')({ app, db, jwt, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, mstatus, bstatus, isBlocked, s });
-require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, whoIs, PLANS, CUR, admins });
+require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, whoIs, PLANS, CUR, admins, founderState, viewerEmail });
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
 const IMG_DIR = path.join(__dirname, 'public', 'img');
