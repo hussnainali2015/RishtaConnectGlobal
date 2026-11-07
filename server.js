@@ -55,6 +55,19 @@ CREATE TABLE IF NOT EXISTS memberships(email TEXT PRIMARY KEY, plan TEXT, expire
 CREATE TABLE IF NOT EXISTS verification(email TEXT PRIMARY KEY, identity INTEGER DEFAULT 0, photo INTEGER DEFAULT 0, background INTEGER DEFAULT 0, revoked_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS member_status(email TEXT PRIMARY KEY, status TEXT NOT NULL, reason TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS brokers(email TEXT PRIMARY KEY, profile_json TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS broker_reviews(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  broker TEXT NOT NULL,                      -- the broker's account email (brokers.email)
+  reviewer TEXT NOT NULL,                    -- the member's account email (users.email)
+  rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  body TEXT NOT NULL DEFAULT '',             -- optional text, at most 600 characters
+  status TEXT NOT NULL DEFAULT 'published' CHECK(status IN ('published','hidden')),
+  hidden_reason TEXT, hidden_by TEXT, hidden_at TEXT,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  UNIQUE(broker, reviewer)                   -- one review per member per broker
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_broker ON broker_reviews(broker, status, created_at DESC);
+CREATE TABLE IF NOT EXISTS review_flags(review_id INTEGER NOT NULL, reporter TEXT NOT NULL, reason TEXT, created_at TEXT, PRIMARY KEY(review_id, reporter));
 CREATE TABLE IF NOT EXISTS conversations(id INTEGER PRIMARY KEY AUTOINCREMENT, u1 TEXT NOT NULL, u2 TEXT NOT NULL, created_at TEXT, UNIQUE(u1,u2));
 CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT, conv_id INTEGER NOT NULL, sender TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT);
 CREATE INDEX IF NOT EXISTS msg_conv ON messages(conv_id,id);
@@ -468,7 +481,8 @@ app.post('/api/broker/apply', auth, csrf, wrap(async (req, res) => {
 }));
 app.get('/api/brokers', (req, res) => { // public list: approved brokers only, no emails
   const rows = db.prepare("SELECT email,profile_json FROM brokers WHERE status='approved' ORDER BY updated_at DESC").all();
-  res.json(rows.filter(r => mstatus(r.email) !== 'suspended').map(r => ({ id: opaque(r.email), ...JSON.parse(r.profile_json) })));
+  const rt = {}; for (const r of db.prepare("SELECT broker,COUNT(*) n,AVG(rating) a FROM broker_reviews WHERE status='published' GROUP BY broker").all()) rt[r.broker] = { count: r.n, avg: Math.round(r.a * 10) / 10 };
+  res.json(rows.filter(r => mstatus(r.email) !== 'suspended').map(r => ({ id: opaque(r.email), ...JSON.parse(r.profile_json), rating: rt[r.email] || { count: 0, avg: null } })));
 });
 app.get('/api/admin/brokers', auth, adminOnly, (req, res) => {
   const rows = db.prepare('SELECT * FROM brokers ORDER BY created_at DESC').all();
@@ -831,6 +845,7 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
   r.ok ? res.json({ ok: true, stamp: r.stamp }) : res.status(500).json({ error: 'Backup failed: ' + r.error });
 }));
 
+require('./reviews')({ app, db, jwt, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, mstatus, bstatus, isBlocked, s });
 require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, whoIs, PLANS, CUR, admins });
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
