@@ -242,7 +242,7 @@ function nav(){const cur=GR[V]||V,item=(k,label,badge)=>`<a class="${cur==k?'on'
   (me?`<button class="btn ol s" onclick="logout()">${t('out')}</button>`:`<button class="btn s" onclick="login()">${t('login')}</button>`)+`</div>`;
  $('#dock').innerHTML=`<div class="bar">`+['home','plans','search','brokers','msgs','profile'].map(k=>item(k,t(k))).join('')+(me?item('notifs','Alerts',me.unread||0):'')+(me&&me.broker?item('apply','Broker account'):'')+(me&&me.isAdmin?item('admin','Admin'):'')+`</div>`}
 function toggle3d(){if(window.Scene3D){Scene3D.toggle();nav()}}
-function setLang(l){if(l=='en'&&document.documentElement.dataset.tr){try{localStorage.setItem('rcg-lang','en')}catch(e){}location.reload();return}lang=l;try{localStorage.setItem('rcg-lang',l)}catch(e){}document.documentElement.lang=l;document.documentElement.dir=l=='en'?'ltr':'rtl';render()}
+function setLang(l){lang=l;try{localStorage.setItem('rcg-lang',l)}catch(e){}document.documentElement.lang=l;document.documentElement.dir=l=='en'?'ltr':'rtl';render();if(window.I18N)I18N.apply()}
 const lockMsg=()=>active()?'':`<div class="lock">${D.lock||(me&&me.profile?'Your profile is not active yet. Complete payment to activate it.':'Create your profile, then pay to activate it.')} <a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="go('${me&&me.profile?'pay':'profile'}')">Continue</a></div>`;
 const steps=n=>`<div class="steps"><span class="on">1 Sign in</span><span class="${n>1?'on':''}">2 Profile</span><span class="${n>2?'on':''}">3 Payment</span></div>`;
 
