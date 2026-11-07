@@ -35,7 +35,7 @@ function cleanJpeg(buf) {
 }
 
 module.exports = function (x) {
-  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, PLANS, CUR, admins } = x;
+  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, PLANS, CUR, admins, founderState, viewerEmail } = x;
   const cfg = {
     name: E.BUSINESS_NAME || 'Rishta Connect Global', email: E.SUPPORT_EMAIL || '', reviewed: E.LEGAL_REVIEWED === 'true',
     juris: E.LEGAL_JURISDICTION || 'the laws of the country where the operator of this website is established', backupDays: String(parseInt(E.BACKUP_KEEP, 10) || 14),
@@ -53,7 +53,14 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
   for (const p of ['terms', 'privacy', 'safety', 'contact']) app.get('/' + p, (req, res) => res.type('html').send(legal[p](cfg)));
 
   /* ---- plans (prices come only from the server) ---- */
-  app.get('/api/plans', (req, res) => res.json(Object.entries(PLANS).map(([id, p]) => ({ id, name: p.name, price: p.price, months: p.months, currency: CUR, features: p.features || [] }))));
+  app.get('/api/plans', (req, res) => { // the Founder plan is shown to visitors while spots remain, and to the founders themselves; other members do not see it
+    const fs = founderState(viewerEmail(req)), me = viewerEmail(req);
+    res.json(Object.entries(PLANS).filter(([id, p]) => !p.founder || fs.mine || (!me && fs.left > 0)).map(([id, p]) => {
+      const o = { id, name: p.name, price: p.price, months: p.months, currency: CUR, features: p.features || [] };
+      if (p.founder) Object.assign(o, { founder: true, was: PLANS.plus.price, limit: fs.limit, left: fs.left, n: fs.mine });
+      return o;
+    }));
+  });
 
   /* ---- member detail and shortlist ---- */
   const needActive = (req, res) => {
