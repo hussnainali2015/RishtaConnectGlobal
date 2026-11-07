@@ -250,6 +250,13 @@
     "Your account has been deleted.": ["آپ کا اکاؤنٹ حذف کر دیا گیا ہے۔","تم حذف حسابك."],
     "This cannot be undone.": ["اسے واپس نہیں کیا جا سکتا۔","لا يمكن التراجع عن ذلك."],
     "Create your profile first.": ["پہلے اپنا پروفائل بنائیں۔","أنشئ ملفك أولاً."],
+    "Founder Membership": ["فاؤنڈر ممبرشپ","عضوية المؤسسين"],
+    "All Premium Plus features": ["پریمیم پلس کی تمام سہولیات","كل ميزات بريميوم بلس"],
+    "Founder price for the whole period": ["پوری مدت کے لیے فاؤنڈر قیمت","سعر المؤسسين طوال المدة"],
+    "Founder badge on your profile": ["آپ کے پروفائل پر فاؤنڈر بیج","شارة المؤسس على ملفك"],
+    "Founder offer": ["فاؤنڈر آفر","عرض المؤسسين"],
+    "Your founder spot is reserved.": ["آپ کی فاؤنڈر جگہ محفوظ ہے۔","مقعدك كمؤسس محجوز."],
+    "You already have the Founder Membership. Choose another plan to renew.": ["آپ کے پاس فاؤنڈر ممبرشپ پہلے سے ہے۔ تجدید کے لیے کوئی اور پلان منتخب کریں۔","لديك عضوية المؤسسين بالفعل. اختر خطة أخرى للتجديد."],
     "1 Sign in": ["1 لاگ اِن","1 تسجيل الدخول"],
     "2 Profile": ["2 پروفائل","2 الملف"],
     "3 Payment": ["3 ادائیگی","3 الدفع"],
@@ -472,6 +479,10 @@
   /* ---------------------------------------------------------------- 2. patterns ----------------- */
   // Each: regex, then one function per language. (m = regex match, T = translate a fragment, leaving it as is if unknown)
   const PATTERNS = [
+    { re: /^Founder #(\d+)$/, ur: m => `فاؤنڈر نمبر ${m[1]}`, ar: m => `المؤسس رقم ${m[1]}` },
+    { re: /^(\d+) of (\d+) founder spots left$/, ur: m => `فاؤنڈر کی ${m[2]} میں سے ${m[1]} جگہیں باقی`, ar: m => `بقي ${m[1]} من ${m[2]} مقعدًا للمؤسسين` },
+    { re: /^Founder Membership is only for the first (\d+) members who signed up\.$/, ur: m => `فاؤنڈر ممبرشپ صرف سائن اپ کرنے والے پہلے ${m[1]} ممبران کے لیے ہے۔`, ar: m => `عضوية المؤسسين لأول ${m[1]} عضوًا سجّلوا فقط.` },
+    { re: /^Choose (.+)$/, ur: (m, T) => `${T(m[1])} منتخب کریں`, ar: (m, T) => `اختر ${T(m[1])}` },
     { re: /^(\d+) members? found$/, ur: m => `${m[1]} ممبران ملے`, ar: m => `تم العثور على ${m[1]} عضو` },
     { re: /^Page (\d+) of (\d+)$/, ur: m => `صفحہ ${m[1]} از ${m[2]}`, ar: m => `صفحة ${m[1]} من ${m[2]}` },
     { re: /^Pay (\S+) (\w+) securely$/, ur: m => `${m[1]} ${m[2]} محفوظ طریقے سے ادا کریں`, ar: m => `ادفع ${m[1]} ${m[2]} بأمان` },
