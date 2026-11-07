@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
       photo: photo ? { shown_to_members: !!photo.visible, jpeg_base64: photo.data.toString('base64') } : null,
       payments: one('SELECT id,plan,amount,currency,status,created_at,paid_at,refunded_at FROM payments WHERE email=? ORDER BY created_at', em),
       conversations: convs.map(c => ({ with: x.whoIs(c.u1 === em ? c.u2 : c.u1).n, messages: one('SELECT sender,body,created_at FROM messages WHERE conv_id=? ORDER BY id LIMIT 5000', c.id).map(m => ({ from: m.sender === em ? 'you' : 'them', body: m.body, at: m.created_at })) })),
+      broker_reviews_written: one('SELECT b.rating,b.body,b.status,b.created_at,b.updated_at FROM broker_reviews b WHERE b.reviewer=? ORDER BY b.id', em),
       shortlist_count: db.prepare('SELECT COUNT(*) n FROM shortlist WHERE owner=?').get(em).n,
       blocked_count: db.prepare('SELECT COUNT(*) n FROM blocks WHERE blocker=?').get(em).n,
       notifications: one('SELECT title,body,created_at FROM notifications WHERE email=? ORDER BY id', em),
@@ -185,7 +186,8 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
     db.transaction(() => {
       const cids = db.prepare('SELECT id FROM conversations WHERE u1=? OR u2=?').all(em, em).map(r => r.id);
       for (const id of cids) { db.prepare('DELETE FROM messages WHERE conv_id=?').run(id); db.prepare('DELETE FROM conv_reads WHERE conv_id=?').run(id); db.prepare('DELETE FROM conversations WHERE id=?').run(id); }
-      for (const [t, col] of [['photos', 'email'], ['memberships', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em);
+      for (const [t, col] of [['photos', 'email'], ['memberships', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em);
+      db.prepare('DELETE FROM review_flags WHERE review_id NOT IN (SELECT id FROM broker_reviews)').run();
       db.prepare('UPDATE payments SET email=? WHERE email=?').run(g, em); // accounting records stay, without the email
       db.prepare('UPDATE reports SET reporter=? WHERE reporter=?').run(g, em);
       db.prepare('DELETE FROM users WHERE email=?').run(em);
