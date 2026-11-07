@@ -1,441 +1,612 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="theme-color" content="#7b1030"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png"><link rel="apple-touch-icon" href="/img/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Rishta Connect Global</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async defer></script>
-<style>
-:root{--mr:#7b1030;--mr2:#4f0a1f;--gd:#b88a2e;--gd2:#e2c277;--gd3:#f3e3b8;--bg:#fbf5ec;--cd:#fff;--ink:#2b1a20;--mu:#75646a;--ln:#e6d8c4;--ok:#1f7a4a;color-scheme:light;box-sizing:border-box}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;min-height:100vh}
-h1,h2,h3,.serif{font-family:'Playfair Display',Georgia,serif;margin:0 0 .4em}
-.wrap{max-width:1040px;margin:0 auto;padding:0 18px}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--ln)}
-.nav{display:flex;align-items:center;gap:14px;padding:10px 0;flex-wrap:wrap}
-.logo{display:flex;align-items:center;gap:8px;cursor:pointer;margin-inline-end:auto}
-.logo b{font:700 22px 'Playfair Display',Georgia,serif;color:var(--mr)}.logo b i{color:var(--gd);font-style:normal}
-.nav a{cursor:pointer;font-weight:500;padding:6px 2px;border-bottom:2px solid transparent}.nav a.on{color:var(--mr);border-color:var(--gd)}
-select,input,textarea{font:inherit;color:var(--ink);background:var(--cd);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;width:100%}
-select.lang{width:auto;padding:6px 8px}
-:focus-visible{outline:2px solid var(--gd);outline-offset:2px}
-.btn{background:var(--mr);color:#fff;border:0;border-radius:10px;padding:11px 18px;font-weight:600;cursor:pointer}
-.btn.gd{background:linear-gradient(#e3c070,#b88a2e);color:#3a1a05}.btn.ol{background:transparent;color:var(--mr);border:1.5px solid var(--mr)}
-.btn.w{width:100%}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.s{padding:5px 12px}
-.hero{background:linear-gradient(160deg,var(--mr2),var(--mr) 60%,#9b2a4a);color:#fff;border-radius:0 0 28px 28px;padding:48px 0 56px}
-.hero h1{font-size:clamp(30px,6vw,52px);max-width:14em}.hero p{max-width:32em;opacity:.9}
-.badges{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.badges span{border:1px solid var(--gd2);color:var(--gd2);border-radius:20px;padding:4px 12px;font-size:13px}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
-.card{background:var(--cd);border:1px solid var(--ln);border-radius:16px;padding:16px}
-.av img{width:100%;height:100%;object-fit:cover;border-radius:50%}.av{overflow:hidden;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gd),var(--mr));color:#fff;display:grid;place-items:center;font:700 20px 'Playfair Display',serif;flex:none}
-.row{display:flex;gap:12px;align-items:center}.sp{justify-content:space-between}
-.tag{font-size:12px;border-radius:12px;padding:2px 9px;background:#f4e7c8;color:#6b4a0a}.tag.v{background:#dff1e6;color:var(--ok)}
-.mu{color:var(--mu);font-size:13px}.sec{padding:26px 0}
-.form{display:grid;gap:12px;max-width:560px}.form label{font-weight:500;font-size:13px;display:grid;gap:4px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.plan{cursor:pointer;border:2px solid var(--ln);border-radius:14px;padding:14px;background:var(--cd)}.plan.sel{border-color:var(--gd);background:#fdf6e3;color:#2b1a20}.plan b{color:var(--mr)}
-.steps{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}.steps span{padding:4px 12px;border-radius:14px;border:1px solid var(--ln);font-size:13px}.steps .on{background:var(--mr);color:#fff;border-color:var(--mr)}
-.modal{position:fixed;inset:0;background:#0008;display:grid;place-items:center;padding:18px;z-index:20}.modal .card{max-width:380px;width:100%}
-.chat{display:grid;gap:8px;max-height:46vh;overflow:auto;padding:8px 0}
-.b{max-width:78%;padding:8px 12px;border-radius:14px;background:var(--cd);border:1px solid var(--ln)}.b.me{background:var(--mr);color:#fff;margin-inline-start:auto;border:0}
-.lock{border-radius:14px;padding:12px 14px;margin-bottom:14px}
-#toast{position:fixed;inset-inline:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));margin:auto;width:max-content;max-width:92vw;background:#2b1a20;color:#fff;padding:10px 16px;border-radius:12px;z-index:30;display:none}
-table{width:100%;border-collapse:collapse}td,th{padding:9px 6px;text-align:start}tr+tr{border-top:1px solid var(--ln)}th{color:var(--mu);font-weight:500}
-footer{text-align:center;color:var(--mu);padding:28px 0;font-size:13px}
-.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:-26px;position:relative}.trust div{background:var(--cd);border:1px solid var(--ln);border-radius:14px;padding:12px 14px;font-weight:500}.trust i{font-style:normal;color:var(--gd);margin-inline-end:6px}
-.pg{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:18px}.danger{border-color:#b3261e;color:#b3261e}.danger-box{border:1px solid #b3261e55;border-radius:14px;padding:14px}
-.lg{width:120px;height:120px;font-size:36px}.flinks a{color:var(--mu);margin:0 8px}.sw{display:flex;gap:8px;align-items:center}.sw input{width:auto}
-@media(max-width:560px){.two{grid-template-columns:1fr}.nav{gap:6px}}@media(max-width:470px){.logo b{display:none}.nav .btn.s{padding:7px 12px}select.lang{padding:6px 6px;font-size:13px}}
-/* ===== Warm heritage theme: ivory pages, deep maroon, antique gold ===== */
-html{background:var(--bg)}
-body{background:var(--bg);overflow-x:hidden;padding-bottom:calc(74px + env(safe-area-inset-bottom,0px));-webkit-font-smoothing:antialiased}
-a{color:var(--mr)}
-h1,h2,h3{color:var(--mr);letter-spacing:.005em}
-header.top{position:fixed;inset:0 0 auto 0;z-index:12;background:rgba(255,250,242,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--ln);box-shadow:0 1px 0 rgba(184,138,46,.25);padding-top:env(safe-area-inset-top,0px)}
-.nav{display:flex;align-items:center;gap:10px;padding:8px 18px;flex-wrap:nowrap;min-height:60px}
-.logo{display:flex;align-items:center;gap:10px;cursor:pointer;margin-inline-end:auto;min-width:0}
-.logo img{width:44px;height:44px;border-radius:12px;object-fit:cover;flex:none;box-shadow:0 0 0 1.5px var(--gd2)}
-.logo b{font:700 19px/1.1 'Playfair Display',Georgia,serif;color:var(--mr);white-space:nowrap}.logo b i{color:var(--gd);font-style:normal}
-.nav .ctl{display:flex;gap:8px;align-items:center}
-select.lang{background:#fff;border:1px solid var(--ln);border-radius:20px;padding:6px 10px;width:auto;color:var(--ink)}
-.orb{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--ln);background:#fff;color:var(--mr);cursor:pointer;padding:0;font-size:16px}
-main{position:relative;z-index:2;padding-top:calc(64px + env(safe-area-inset-top,0px));min-height:100vh}
-#app>*{animation:fade .5s ease both}@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.card,.plan{background:#fff;border:1px solid var(--ln);border-radius:18px;box-shadow:0 10px 30px -16px rgba(79,10,31,.28);color:var(--ink);transform:none!important;position:relative;transition:border-color .2s,box-shadow .2s}
-main .card:hover,main .plan:hover{border-color:var(--gd2);box-shadow:0 16px 38px -16px rgba(79,10,31,.35)}
-.card h3,.card b{transform:none}
-.plan.sel{background:#fff8e6;border-color:var(--gd);box-shadow:0 0 0 3px rgba(184,138,46,.2)}
-.btn{background:linear-gradient(180deg,#8f1538,#6b0f2a);color:#fff;border-radius:12px;box-shadow:0 6px 16px -8px rgba(79,10,31,.7);transition:transform .15s,box-shadow .15s}
-.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(79,10,31,.75)}
-.btn.gd{background:linear-gradient(180deg,#efd28b,#c79a3a);color:#3a1a05;box-shadow:0 8px 20px -8px rgba(184,138,46,.9)}
-.btn.ol{background:transparent;color:var(--mr);border:1.5px solid var(--mr);box-shadow:none}
-.btn.big{padding:14px 28px;font-size:16px;border-radius:14px}
-select,input,textarea{background:#fff;border:1px solid var(--ln);color:var(--ink);border-radius:12px}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gd);box-shadow:0 0 0 3px rgba(184,138,46,.22)}
-.lock{background:#fff4d6;color:#5b3d06;border:1px solid #e8cf8a}.lock a{color:var(--mr)!important}
-.tag{background:#f6ead0;color:#6b4a0a}.tag.v{background:#dff1e6;color:var(--ok)}
-.steps span{background:#fff}.steps .on{background:var(--mr);border-color:var(--mr)}
-.b.me{background:var(--mr)}
-.modal{background:rgba(43,10,20,.62);backdrop-filter:blur(4px)}.modal .card{animation:fade .3s both}
-#toast{background:#4f0a1f;border:1px solid var(--gd);bottom:calc(86px + env(safe-area-inset-bottom,0px))}
-.lg{box-shadow:0 0 0 3px var(--gd2)}
-/* ----- hero ----- */
-.hero{position:relative;overflow:hidden;color:#fff;border-radius:0;padding:34px 0 64px;
- background:radial-gradient(900px 500px at 85% 10%,rgba(184,138,46,.28),transparent 60%),linear-gradient(135deg,#4a0a1c 0%,#7b1030 55%,#5a0d26 100%);
- border-bottom:3px solid var(--gd)}
-.hero::before{content:"";position:absolute;inset:0;opacity:.9;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cpath d='M44 6l7 17 17-7-7 17 17 7-17 7 7 17-17-7-7 17-7-17-17 7 7-17-17-7 17-7-7-17 17 7z' fill='none' stroke='%23e2c277' stroke-opacity='.13'/%3E%3C/svg%3E")}
-.hero-in{position:relative;display:grid;gap:30px;align-items:center;grid-template-columns:1fr}
-.hero .kicker{letter-spacing:.3em;text-transform:uppercase;font-size:12px;color:var(--gd2);margin-bottom:12px;font-weight:600}
-.hero h1{color:#fff;font-size:clamp(34px,7vw,62px);line-height:1.06;margin:0 0 .25em;max-width:11em}
-.orn{display:flex;align-items:center;gap:10px;margin:6px 0 16px}.orn::before,.orn::after{content:"";height:1px;width:56px;background:linear-gradient(90deg,transparent,var(--gd2))}.orn::after{transform:scaleX(-1)}.orn i{width:9px;height:9px;background:var(--gd2);transform:rotate(45deg)}
-.hero p{max-width:32em;font-size:17px;color:#f6e9e2;opacity:1;margin:0 0 6px}
-.hero .badges span{border:1px solid rgba(226,194,119,.7);color:var(--gd3);background:rgba(255,255,255,.06)}
-.hero .cta{flex-wrap:wrap;margin-top:6px}
-.hero .btn.ol{color:var(--gd3);border-color:rgba(243,227,184,.65)}
-.hero-art{display:grid;place-items:center}
-.arch{position:relative;width:min(300px,72vw);aspect-ratio:3/4;border-radius:999px 999px 22px 22px;padding:9px;background:linear-gradient(160deg,#f3e3b8,#b88a2e);box-shadow:0 30px 60px -20px rgba(0,0,0,.6)}
-.arch .in{position:relative;width:100%;height:100%;border-radius:999px 999px 14px 14px;overflow:hidden;background:linear-gradient(170deg,#8f1538,#4a0a1c)}
-.arch .in svg{position:absolute;inset:0;width:100%;height:100%}
-.arch .in img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:42% 36%}
-.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:-30px 0 0;position:relative;overflow:visible;padding:0}
-.trust div{background:#fff;border:1px solid var(--ln);border-radius:16px;padding:14px 16px;font-weight:600;color:var(--mr);display:flex;align-items:center;gap:10px;box-shadow:0 12px 28px -16px rgba(79,10,31,.35);white-space:normal;flex:initial}
-.trust i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#f9efd6;color:var(--gd);flex:none;margin:0}.trust i svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.sh{text-align:center;font-size:clamp(26px,4.5vw,36px);margin:0 0 .2em}.sub{text-align:center;color:var(--mu);max-width:36em;margin:0 auto 22px}
-.sh::after{content:"";display:block;width:70px;height:3px;border-radius:2px;margin:10px auto 0;background:linear-gradient(90deg,var(--mr),var(--gd))}
-.why .card{text-align:center;padding:22px 18px}.why .card .ic{width:54px;height:54px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;background:linear-gradient(160deg,#fff8e6,#f1dfb0);color:var(--mr);box-shadow:inset 0 0 0 1.5px var(--gd2)}.why .card .ic svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.how .card{border-top:3px solid var(--gd)}
-.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.gal figure{margin:0;border-radius:200px 200px 16px 16px;overflow:hidden;aspect-ratio:4/5;background:#f1e6d3;box-shadow:0 14px 30px -16px rgba(79,10,31,.4);border:3px solid var(--gd2)}.gal img{width:100%;height:100%;object-fit:cover;display:block}
-.band{position:relative;overflow:hidden;margin:34px 0 0;padding:40px 0 310px;text-align:start;color:#fff;background:#4a0a1c;border-top:3px solid var(--gd);border-bottom:3px solid var(--gd)}
-.band::before{content:"";position:absolute;inset-inline:0;bottom:0;height:300px;background:url(/img/couple-bg.JPG) 50% 34%/cover no-repeat;-webkit-mask-image:linear-gradient(to top,#000 55%,transparent);mask-image:linear-gradient(to top,#000 55%,transparent)}
-.band::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(74,10,28,.55),rgba(74,10,28,0) 60%)}
-.band .wrap{position:relative;z-index:1}
-.band h2{color:#fff;font-size:clamp(26px,4.5vw,40px);max-width:12em;text-shadow:0 2px 14px rgba(0,0,0,.35)}.band p{color:#f6e9e2;margin:0 0 18px;max-width:30em;text-shadow:0 1px 10px rgba(0,0,0,.4)}
-@media(min-width:900px){
- .band{padding:70px 0;min-height:420px;display:flex;align-items:center}.band .wrap{width:100%}
- .band::before{inset:0 0 0 auto;width:62%;height:auto;background-position:50% 36%;-webkit-mask-image:linear-gradient(to left,#000 62%,transparent);mask-image:linear-gradient(to left,#000 62%,transparent)}
- [dir=rtl] .band::before{inset:0 auto 0 0;-webkit-mask-image:linear-gradient(to right,#000 62%,transparent);mask-image:linear-gradient(to right,#000 62%,transparent)}
- .band::after{background:none}.band .wrap>*{max-width:44%}
-}
-footer{background:#3b0817;color:#e8cfc4;padding:30px 18px calc(30px + 70px);margin-top:0;font-size:13px}
-footer img{width:46px;height:46px;border-radius:12px;display:block;margin:0 auto 10px;box-shadow:0 0 0 1.5px var(--gd2)}
-.flinks a,footer a{color:var(--gd2);margin:0 8px}
-/* ----- navigation: bottom tab bar on phones, a quiet bar under the header on larger screens ----- */
-#dock{position:fixed;z-index:14;inset-inline:0;bottom:0;background:#fffaf2;border-top:1px solid var(--ln);box-shadow:0 -8px 24px -14px rgba(79,10,31,.4);padding-bottom:env(safe-area-inset-bottom,0px)}
-#dock .bar{display:flex;justify-content:space-around;gap:0;padding:4px 6px 2px;overflow-x:auto;scrollbar-width:none}#dock .bar::-webkit-scrollbar{display:none}
-#dock a{flex:1 0 auto;display:grid;justify-items:center;gap:2px;min-width:56px;padding:7px 6px 5px;color:var(--mu);font-size:11px;font-weight:600;cursor:pointer;position:relative;border-radius:12px}
-#dock a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-#dock a.on{color:var(--mr)}#dock a.on::before{content:"";position:absolute;top:0;width:26px;height:3px;border-radius:2px;background:var(--gd)}
-#dock a .n{position:absolute;top:2px;inset-inline-end:10px;background:var(--mr);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;line-height:15px}
-.wrap.sec{padding-inline:18px}
-.arch{width:min(230px,62vw)}
-@media(min-width:900px){
- body{padding-bottom:0}
- .hero-in{grid-template-columns:1.15fr .85fr;gap:50px}.hero{padding:52px 0 84px}.arch{width:340px}.wrap.sec{padding-inline:18px}
- #dock{top:calc(60px + env(safe-area-inset-top,0px));bottom:auto;border-top:0;border-bottom:1px solid var(--ln);box-shadow:none;background:#fff;padding:0}
- #dock .bar{justify-content:center;gap:6px;padding:0}
- #dock a{flex:none;display:flex;gap:8px;align-items:center;font-size:14px;padding:12px 16px;border-radius:0;min-width:0}
- #dock a svg{width:18px;height:18px}#dock a.on::before{top:auto;bottom:0;width:100%;height:3px}
- main{padding-top:calc(108px + env(safe-area-inset-top,0px))}
- #toast{bottom:24px}footer{padding-bottom:30px}
-}
-@media(max-width:470px){.logo b{display:block;font-size:14px;white-space:normal;max-width:96px}.logo{gap:8px}.logo img{width:38px;height:38px}.nav{gap:6px;padding-inline:12px}select.lang{padding:6px 4px;font-size:13px}.nav .btn.s{padding:7px 12px}}
-/* ----- broker ratings and reviews ----- */
-.stars{display:inline-block;font-size:18px;letter-spacing:2px;line-height:1;white-space:nowrap;background:linear-gradient(90deg,var(--gd) calc(var(--v)*20%),#d9ccb8 calc(var(--v)*20%));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
-[dir=rtl] .stars{background:linear-gradient(270deg,var(--gd) calc(var(--v)*20%),#d9ccb8 calc(var(--v)*20%));-webkit-background-clip:text;background-clip:text}
-.rate{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:13px}.rate .stars{font-size:15px}
-.big{font:700 46px/1 'Playfair Display',Georgia,serif;color:var(--mr)}
-.rb{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0}.rb i{flex:1;height:8px;border-radius:6px;background:#efe4d0;overflow:hidden}.rb u{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--gd2),var(--gd))}.rb span{min-width:28px;text-align:center}
-.pick{display:flex;gap:2px;margin:4px 0 10px}.pick button{background:none;border:0;font-size:36px;line-height:1;color:#d9ccb8;cursor:pointer;padding:0;min-width:46px;min-height:46px}.pick button.on{color:var(--gd)}.pick button:focus-visible{outline:2px solid var(--gd);border-radius:10px}
-.rv{border-top:1px solid var(--ln);padding:14px 0}.rv:first-of-type{border-top:0}.rv .who{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rv p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.lnk{background:none;border:0;color:var(--mu);font-size:12px;text-decoration:underline;cursor:pointer;padding:0}
-.mine{background:#fff8e6;border:1px solid var(--gd2);border-radius:14px;padding:12px 14px}
-@media(prefers-reduced-motion:reduce){#app>*,.modal .card{animation:none}}
+/* ==========================================================================================================
+   Rishta Connect Global: translation layer (English, Urdu, Arabic)
 
-</style></head><body>
-<header class="top"><div class="wrap nav" id="nav"></div></header>
-<main id="app"></main>
-<nav id="dock" aria-label="Main"></nav>
-<footer><img src="/img/logo.png" alt="Rishta Connect Global logo"><div class="flinks"><a href="/terms" target="_blank" rel="noopener">Terms</a><a href="/privacy" target="_blank" rel="noopener">Privacy</a><a href="/safety" target="_blank" rel="noopener">Safety tips</a><a href="/contact" target="_blank" rel="noopener">Contact</a></div>© Rishta Connect Global · Real connections last forever</footer>
-<div id="modal"></div><div id="toast" role="status"></div>
-<script>
-const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api=(u,b)=>fetch(u,{method:b?'POST':'GET',headers:{'content-type':'application/json','x-requested-with':'fetch'},body:b?JSON.stringify(b):undefined})
- .then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Request failed. Try again.');return j});
-let toastT;const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>t.style.display='none',4500)};
-const act=f=>f().catch(e=>toast(e.message));
-let me=null,cfg=null,V='home',A=null,D={},lang='en',chatT=null;
-try{lang=localStorage.getItem('rcg-lang')||'en'}catch(e){}
-const T={en:{home:'Home',plans:'Membership',search:'Search',brokers:'Brokers',msgs:'Messages',profile:'My profile',login:'Login',out:'Log out',tag:'Your Journey to a Perfect Match',start:'Get started',find:'Find your life partner'},
-ur:{home:'ہوم',plans:'رکنیت',search:'تلاش',brokers:'بروکرز',msgs:'پیغامات',profile:'میرا پروفائل',login:'لاگ اِن',out:'لاگ آؤٹ',tag:'بہترین رشتے کی طرف آپ کا سفر',start:'شروع کریں',find:'اپنا جیون ساتھی تلاش کریں'},
-ar:{home:'الرئيسية',plans:'العضوية',search:'بحث',brokers:'الوسطاء',msgs:'الرسائل',profile:'ملفي',login:'دخول',out:'خروج',tag:'رحلتك نحو الشريك المثالي',start:'ابدأ الآن',find:'ابحث عن شريك حياتك'}};
-const t=k=>T[lang][k];
-let PL=[];const loadPlans=async()=>{if(PL.length)return;PL=(await api('/api/plans')).map(p=>({id:p.id,n:p.name,p:p.price,m:p.months,f:p.features,cur:p.currency}))};
-const avt=(m,cls)=>`<div class="av ${cls||''}">${m.ph?`<img src="/api/photo/${encodeURIComponent(m.id)}" alt="">`:ini(m.n)}</div>`;
-const mcard=(m,i)=>`<div class="card"><div class="row" style="cursor:pointer" onclick="openMember(${i})">${avt(m)}<div><b>${esc(m.n)}</b> ${m.verified?'<span class="tag v">Verified</span>':'<span class="tag">Unverified</span>'}<div class="mu">${m.a} yrs · ${esc(m.c)} · ${esc(m.j)}</div></div></div><p>${esc(m.x)}</p><div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" onclick="chatWith(${i})">Send message</button><button class="btn ol" onclick="openMember(${i})">View</button><button class="btn ol" onclick="toggleSl('${m.id}',${m.sl},V)" aria-label="${m.sl?'Remove from shortlist':'Save to shortlist'}">${m.sl?'★':'☆'}</button><button class="btn ol" onclick="reportMember(${i})" aria-label="Report ${esc(m.n)}">Report</button></div></div>`;
-let A0={v:'search'};
-const openMember=i=>{A0={v:V,a:V=='search'?A:undefined};go('member',D.members[i].id)};
-const goPage=n=>go('search',{...(A||{}),page:n});
-const choosePlan=id=>{if(!me)return login();go(me.profile?'pay':'profile',me.profile?id:undefined)};
-function toggleSl(id,on,back){act(async()=>{await api(on?'/api/shortlist/remove':'/api/shortlist',{user:id});toast(on?'Removed from shortlist':'Saved to shortlist');if(!on&&window.Scene3D)Scene3D.pulse();if(back=='member')go('member',id);else go(back,back=='search'?A:undefined)})}
-const ini=n=>String(n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-const active=()=>!!(me&&me.membership&&me.membership.active);
-const LOGO='<img src="/img/logo.png" alt="" width="44" height="44">';
-const ART=`<div class="arch"><div class="in"><svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A bride and groom standing together under a crescent moon and a heart"><defs><linearGradient id="cbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f1538"/><stop offset=".6" stop-color="#6b0f2a"/><stop offset="1" stop-color="#3b0817"/></linearGradient><radialGradient id="cglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#f3d58a" stop-opacity=".55"/><stop offset=".6" stop-color="#e2c277" stop-opacity=".12"/><stop offset="1" stop-color="#e2c277" stop-opacity="0"/></radialGradient><linearGradient id="cgold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8ebc4"/><stop offset=".55" stop-color="#e2c277"/><stop offset="1" stop-color="#b88a2e"/></linearGradient><linearGradient id="civ" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fbf1d6"/><stop offset="1" stop-color="#ecd8a4"/></linearGradient><linearGradient id="cveil" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4325f"/><stop offset="1" stop-color="#8f1538"/></linearGradient><mask id="cmoon"><rect width="300" height="400" fill="#fff"/><circle cx="160" cy="42" r="15" fill="#000"/></mask><path id="cstar" d="M0-7 1.800-1.800 7 0 1.800 1.800 0 7-1.800 1.800-7 0-1.800-1.800z"/></defs><rect width="300" height="400" fill="url(#cbg)"/><circle cx="150" cy="205" r="150" fill="url(#cglow)"/><circle cx="150" cy="205" r="118" fill="none" stroke="#e2c277" stroke-opacity=".5" stroke-width="1.500"/><circle cx="150" cy="205" r="107" fill="none" stroke="#e2c277" stroke-opacity=".3" stroke-width="1" stroke-dasharray="2 5"/><circle cx="150" cy="42" r="16" fill="url(#cgold)" mask="url(#cmoon)"/><g fill="#f3e3b8"><use href="#cstar" x="96" y="60" opacity=".9"/><use href="#cstar" x="206" y="78" opacity=".8" transform="translate(206 78) scale(.8) translate(-206 -78)"/><use href="#cstar" x="60" y="130" opacity=".6" transform="translate(60 130) scale(.6) translate(-60 -130)"/><use href="#cstar" x="246" y="148" opacity=".7" transform="translate(246 148) scale(.7) translate(-246 -148)"/><use href="#cstar" x="190" y="28" opacity=".7" transform="translate(190 28) scale(.55) translate(-190 -28)"/></g><!-- ground glow and petals --><ellipse cx="150" cy="368" rx="125" ry="9" fill="#e2c277" opacity=".14"/><g fill="#e2c277" opacity=".55"><ellipse cx="52" cy="352" rx="5" ry="2.500" transform="rotate(-20 52 352)"/><ellipse cx="246" cy="346" rx="5" ry="2.500" transform="rotate(25 246 346)"/><ellipse cx="92" cy="372" rx="4" ry="2" transform="rotate(10 92 372)"/><ellipse cx="214" cy="374" rx="4" ry="2" transform="rotate(-15 214 374)"/><ellipse cx="270" cy="372" rx="3.500" ry="1.800"/></g><!-- BRIDE --><path d="M118 132C92 132 82 156 82 192C82 238 68 298 48 352L88 350C104 300 112 248 118 214Z" fill="url(#cveil)" stroke="#e2c277" stroke-width="2" stroke-linejoin="round"/><path d="M100 194C98 238 82 306 58 366H178C154 306 138 238 136 194Z" fill="url(#cgold)"/><path d="M100 224H136V232H100Z" fill="#8f1538"/><path d="M100 228H136" stroke="#fbf1d6" stroke-width="1" stroke-dasharray="3 3"/><g stroke="#b88a2e" stroke-opacity=".55" fill="none" stroke-width="1.200"><path d="M112 236C108 282 96 334 84 366"/><path d="M126 236C130 282 142 334 154 366"/><path d="M119 236V366"/></g><path d="M58 362H178" stroke="#8f1538" stroke-width="4"/><path d="M58 366H178" stroke="#e2c277" stroke-width="2"/><rect x="113" y="170" width="11" height="26" rx="5" fill="#e6bf9a"/><path d="M100 196C100 188 107 184 118 184S136 188 136 196L135 226H101Z" fill="url(#cgold)"/><circle cx="118" cy="156" r="17" fill="#e6bf9a"/><path d="M101 158C101 140 109 134 118 134S135 140 135 158C130 148 124 145 118 145S106 148 101 158Z" fill="#2a0a12"/><path d="M98 164C98 140 108 129 118 129S138 140 138 164" fill="none" stroke="url(#cveil)" stroke-width="9" stroke-linecap="round"/><path d="M98 164C98 140 108 129 118 129S138 140 138 164" fill="none" stroke="#e2c277" stroke-width="1.200" transform="translate(0 -3.500)"/><path d="M138 164C142 178 146 190 148 204" fill="none" stroke="url(#cveil)" stroke-width="8" stroke-linecap="round"/><circle cx="118" cy="146" r="2.200" fill="#f3e3b8"/><!-- GROOM --><path d="M163 300H201V366H184V310H180V366H163Z" fill="#e8d3a0"/><path d="M163 360H180V366H160ZM184 360H203V366H184Z" fill="#b88a2e"/><path d="M160 194C156 240 158 280 160 318H204C206 280 208 240 204 194Z" fill="url(#civ)"/><path d="M182 188V318" stroke="#b88a2e" stroke-width="1.500"/><g fill="#b88a2e"><circle cx="182" cy="206" r="2"/><circle cx="182" cy="226" r="2"/><circle cx="182" cy="246" r="2"/><circle cx="182" cy="266" r="2"/><circle cx="182" cy="286" r="2"/></g><path d="M160 318H204" stroke="#b88a2e" stroke-width="3"/><path d="M158 196C158 188 168 184 182 184S206 188 206 196Z" fill="url(#civ)"/><path d="M170 184C172 192 178 196 182 196S192 192 194 184L190 184C188 188 185 190 182 190S176 188 174 184Z" fill="#b88a2e"/><rect x="177" y="170" width="11" height="22" rx="5" fill="#d9ad88"/><circle cx="182" cy="156" r="17" fill="#d9ad88"/><path d="M162 148C160 124 204 124 202 148C196 144 168 144 162 148Z" fill="#f3e3b8" stroke="#b88a2e" stroke-width="1.500"/><path d="M163 146C172 142 192 142 201 146" fill="none" stroke="#8f1538" stroke-width="3"/><circle cx="182" cy="132" r="2.500" fill="#b88a2e"/><path d="M158 192C176 214 196 214 206 192L206 206C196 224 172 224 158 206Z" fill="url(#cveil)" stroke="#e2c277" stroke-width="1.200"/><!-- arms and joined hands --><path d="M158 196C152 214 150 236 152 252" fill="none" stroke="#f0dfae" stroke-width="9" stroke-linecap="round"/><path d="M138 200C142 220 146 238 150 252" fill="none" stroke="#e2c277" stroke-width="9" stroke-linecap="round"/><path d="M204 198C210 226 210 252 208 276" fill="none" stroke="#f0dfae" stroke-width="9" stroke-linecap="round"/><circle cx="208" cy="280" r="5" fill="#d9ad88"/><circle cx="151" cy="256" r="6.500" fill="#e6bf9a"/><!-- heart above --><path d="M150 106C130 93 128 76 140 72.500C146 71 150 75 150 79.500C150 75 154 71 160 72.500C172 76 170 93 150 106Z" fill="url(#cgold)"/><use href="#cstar" x="150" y="76" fill="#fbf1d6" opacity=".9" transform="translate(150 76) scale(.7) translate(-150 -76)"/></svg><img src="/img/couple-hero.JPG" alt="A happy couple" width="900" height="1125" fetchpriority="high" onerror="this.remove()"></div></div>`;
-const stars=v=>`<span class="stars" style="--v:${Math.max(0,Math.min(5,Number(v)||0))}" role="img" aria-label="${(Number(v)||0).toFixed(1)} out of 5">★★★★★</span>`;
-const rateLine=r=>r&&r.count?`<div class="rate">${stars(r.avg)} <b>${r.avg.toFixed(1)}</b> <span class="mu">(${r.count})</span></div>`:`<div class="rate mu">No reviews yet</div>`;
-let RV={rating:0,edit:false,text:''};
-const reviewsSec=i=>{const r=D.rv;if(!r)return '';const sm=r.summary,mine=r.mine,
- bars=[5,4,3,2,1].map(k=>{const n=sm.dist[k]||0,p=sm.count?Math.round(n*100/sm.count):0;return `<div class="rb"><span>${k}★</span><i><u style="width:${p}%"></u></i><span class="mu">${n}</span></div>`}).join(''),
- pick=`<div class="pick" role="radiogroup" aria-label="Your rating">${[1,2,3,4,5].map(k=>`<button type="button" role="radio" aria-checked="${RV.rating==k}" aria-label="${k} of 5" class="${k<=RV.rating?'on':''}" onclick="rvStar(${k})">★</button>`).join('')}</div>`,
- form=`<h3 style="margin:0 0 4px">${mine?'Edit your review':'Write a review'}</h3>${pick}<textarea id="rvtext" rows="4" maxlength="${r.max}" placeholder="Share your experience (optional)" oninput="RV.text=this.value;$('#rvc').textContent=this.value.length">${esc(RV.text)}</textarea><div class="row sp" style="margin-top:6px"><span class="mu" style="font-size:12px"><span id="rvc">${RV.text.length}</span>/${r.max}</span><span><button class="btn ol s" onclick="rvCancel()" style="${mine?'':'display:none'}">Cancel</button> <button class="btn s" onclick="rvSubmit(${i})">${mine?'Update review':'Submit review'}</button></span></div><p class="mu" style="font-size:12px;margin:8px 0 0">Be honest and respectful. Please do not include links, phone numbers or personal details.</p>`;
- let box;
- if(!r.signedIn)box=`<p class="mu" style="margin:0 0 10px">Sign in to write a review.</p><button class="btn ol" onclick="login()">Login</button>`;
- else if(mine&&!RV.edit)box=`<div class="mine"><div class="row sp"><b>Your review</b><span>${stars(mine.rating)}</span></div>${mine.body?`<p data-notr style="white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0">${esc(mine.body)}</p>`:''}${mine.hidden?'<p class="mu" style="margin:6px 0">A moderator has hidden this review. It is not shown to others.</p>':''}<button class="btn ol s" onclick="rvEdit()">Edit</button> <button class="btn ol s" onclick="rvDelete(${i})">Delete</button></div>`;
- else if(r.canReview||mine)box=form;
- else box=`<p class="mu" style="margin:0 0 10px">${esc(r.whyNot)}</p>${/^Message this broker first/.test(r.whyNot)?`<button class="btn s" onclick="contactBroker(${i})">Contact broker</button>`:''}`;
- return `<div class="card" style="max-width:560px;margin-top:16px"><h3 style="margin:0 0 12px"><span>Ratings and reviews</span></h3><div class="row" style="gap:18px;align-items:center;flex-wrap:wrap"><div style="text-align:center;min-width:96px"><div class="big">${sm.avg==null?'–':sm.avg.toFixed(1)}</div>${stars(sm.avg||0)}<div class="mu" style="font-size:13px">${sm.count?`${sm.count} review${sm.count==1?'':'s'}`:'No reviews yet'}</div></div><div style="flex:1;min-width:170px">${bars}</div></div><div style="margin:16px 0 4px;border-top:1px solid var(--ln);padding-top:14px">${box}</div>
- <div style="margin-top:8px">${r.rows.filter(x=>!x.mine).map(x=>`<div class="rv"><div class="who"><div class="av" style="width:34px;height:34px;font-size:13px">${ini(x.n)}</div><b data-notr>${esc(x.n)}</b>${stars(x.rating)}<span class="mu" style="font-size:12px">${new Date(x.at).toLocaleDateString(undefined,{year:'numeric',month:'short'})}${x.edited?' · edited':''}</span></div>${x.body?`<p data-notr>${esc(x.body)}</p>`:''}${me?`<button class="lnk" style="margin-top:6px" onclick="rvFlag(${x.id})">Report review</button>`:''}</div>`).join('')}${r.page<r.pages?`<button class="btn ol w" style="margin-top:10px" onclick="rvMore(${i})">Show more reviews</button>`:''}</div></div>`};
-const ICO={ok:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',chat:'<path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-5.4A8 8 0 1121 12z"/>',flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',card:'<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19"/>'};
-const ico=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICO[k]}</svg>`;
-const vtags=v=>v?['identity','photo','background'].map(k=>`<span class="tag ${v[k]?'v':''}">${v[k]?'✓ ':''}${k[0].toUpperCase()+k.slice(1)}</span>`).join(' '):'';
+   English is the source text written in index.html and in the server's messages. This file turns it into
+   Urdu or Arabic after the page is drawn, with no change to the page's own code:
 
-async function go(v,a){
- clearInterval(chatT);
- if(['search','msgs','chat','profile','pay','apply','notifs','settings','shortlist','member'].includes(v)&&!me){V='home';render();return login()}
- if(v=='admin'&&!(me&&me.isAdmin)){toast('Admin access only');return}
- V=v;A=a;D.lock=null;if(v=='chat')D.chat=null;
- try{
-  if(v=='home')D.brokers=await api('/api/brokers').catch(()=>D.brokers||[]);
-  if(v=='plans'||v=='pay')await loadPlans();
-  if(v=='search'){try{const r=await api('/api/members?'+new URLSearchParams(a||{}));D.members=r.rows;D.mp={page:r.page,pages:r.pages,total:r.total}}catch(e){D.members=[];D.mp=null;D.lock=e.message}}
-  if(v=='shortlist'){try{D.members=await api('/api/shortlist')}catch(e){D.members=[];D.lock=e.message}}
-  if(v=='member'){try{D.m1=await api('/api/members/'+encodeURIComponent(a))}catch(e){toast(e.message);return go('search')}}
-  if(v=='brokers'||(v=='broker'&&!D.brokers))D.brokers=await api('/api/brokers');
-  if(v=='broker'){D.rv=null;RV={rating:0,edit:false,text:''};const b=(D.brokers||[])[a];if(b){try{D.rv=await api('/api/brokers/'+encodeURIComponent(b.id)+'/reviews');if(D.rv.mine)RV.rating=D.rv.mine.rating}catch(e){D.rv=null}}}
-  if(v=='msgs'){[D.chats,D.blocks]=await Promise.all([api('/api/chats'),api('/api/blocks')])}
-  if(v=='apply')me=await api('/api/me');
-  if(v=='notifs'){[D.notifs,D.warns,D.appeals]=await Promise.all([api('/api/notifications'),api('/api/warnings'),api('/api/appeals')]);await api('/api/notifications/read',{});me=await api('/api/me')}
-  if(v=='chat'){
-   let id=a&&a.id;
-   if(!id&&a&&a.to){const ex=(await api('/api/chats')).find(c=>c.with.id==a.to);if(ex)id=ex.id}
-   if(id){D.chat=await api('/api/chats/'+id);D.chat.id=id}else D.chat={id:null,with:{id:a.to,n:a.name,kind:a.kind||'member'},messages:[]};
-   startPoll()}
-  if(v=='admin'){D.audF={};[D.pay,D.ver,D.mem,D.brk,D.rep,D.aud,D.apl,D.bkp,D.rvw]=await Promise.all([api('/api/admin/payments'),api('/api/admin/verification'),api('/api/admin/members'),api('/api/admin/brokers'),api('/api/admin/reports'),api('/api/admin/audit'),api('/api/admin/appeals'),api('/api/admin/backups'),api('/api/admin/reviews').catch(()=>[])])}
- }catch(e){toast(e.message);if(v=='chat'&&!D.chat)V='home'}
- render();scrollTo(0,0);if(V=='chat')paintChat()}
-function render(){nav();const bans=[];
- if(me){
-  if(me.status=='suspended')bans.push('Your account is suspended after a safety review. '+(me.appeal&&me.appeal.suspension?'Your appeal is under review.':'<a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="appealForm(\'suspension\')">Appeal this decision</a>'));
-  else if(me.status=='pending')bans.push('Your profile is waiting for admin approval. You will appear in search once approved.');
-  for(const w of me.warnings||[])bans.push(`<b>Warning:</b> ${esc(w.message)} <button class="btn s" onclick="ackWarn(${w.id})">I understand</button> <a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="appealForm('warning',${w.id})">Appeal</a>`);
- }
- const ban=bans.map(b=>`<div class="lock" style="margin-bottom:8px">${b}</div>`).join('');
- if(window.Scene3D)Scene3D.setView(V);$('#app').innerHTML=(ban?`<div class="wrap" style="padding-top:14px">${ban}</div>`:'')+VIEWS[V]();const c=$('.chat');if(c)c.scrollTop=1e9}
-const IC={home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',plans:'<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 6 3-6M12 21L9 9M12 21l3-12"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',brokers:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.8 0 4.5 1.9 4.5 4.5"/>',msgs:'<path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-5.4A8 8 0 1121 12z"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',notifs:'<path d="M6 16V11a6 6 0 1112 0v5l2 2H4z"/><path d="M10 21a2 2 0 004 0"/>',apply:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18"/>',admin:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'};
-const GR={shortlist:'search',member:'search',broker:'brokers',chat:'msgs',settings:'profile',pay:'profile',payresult:'profile',edit:'profile'};
-function nav(){const cur=GR[V]||V,item=(k,label,badge)=>`<a class="${cur==k?'on':''}" onclick="go('${k}')" role="link" aria-label="${label}"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg><span>${label}</span>${badge?`<i class="n">${badge}</i>`:''}</a>`;
-  $('#nav').innerHTML=`<div class="logo" onclick="go('home')">${LOGO}<b>Rishta <i>Connect</i> Global</b></div><div class="ctl">`+
-  (me?`<button class="orb" onclick="go('settings')" aria-label="Settings" title="Settings">⚙</button>`:'')+
-  `<select class="lang" aria-label="Language" onchange="setLang(this.value)">${[['en','English'],['ur','اردو'],['ar','العربية']].map(([c,n])=>`<option value="${c}" ${lang==c?'selected':''}>${n}</option>`).join('')}</select>`+
-  (me?`<button class="btn ol s" onclick="logout()">${t('out')}</button>`:`<button class="btn s" onclick="login()">${t('login')}</button>`)+`</div>`;
- $('#dock').innerHTML=`<div class="bar">`+['home','plans','search','brokers','msgs','profile'].map(k=>item(k,t(k))).join('')+(me?item('notifs','Alerts',me.unread||0):'')+(me&&me.broker?item('apply','Broker account'):'')+(me&&me.isAdmin?item('admin','Admin'):'')+`</div>`}
-function toggle3d(){if(window.Scene3D){Scene3D.toggle();nav()}}
-function setLang(l){if(l=='en'&&document.documentElement.dataset.tr){try{localStorage.setItem('rcg-lang','en')}catch(e){}location.reload();return}lang=l;try{localStorage.setItem('rcg-lang',l)}catch(e){}document.documentElement.lang=l;document.documentElement.dir=l=='en'?'ltr':'rtl';render()}
-const lockMsg=()=>active()?'':`<div class="lock">${D.lock||(me&&me.profile?'Your profile is not active yet. Complete payment to activate it.':'Create your profile, then pay to activate it.')} <a style="color:var(--mr);font-weight:600;cursor:pointer" onclick="go('${me&&me.profile?'pay':'profile'}')">Continue</a></div>`;
-const steps=n=>`<div class="steps"><span class="on">1 Sign in</span><span class="${n>1?'on':''}">2 Profile</span><span class="${n>2?'on':''}">3 Payment</span></div>`;
+     1. DICT        English text -> [Urdu, Arabic]. The text must match exactly (extra spaces and line breaks
+                    are ignored). Add new screens here; the English key is the text exactly as shown.
+     2. PATTERNS    for sentences that contain a number, a name or an email (for example "Page 2 of 5").
+     3. The walker  visits EVERY text node on the page, plus the words inside placeholders, tooltips, button
+                    labels, image descriptions, the page title and the browser's alert/confirm/prompt boxes.
+     4. The watcher re-translates anything the page adds or changes later (new screens, pop-ups, messages).
 
-function profileForm(p){p=p||{};const o=(a,v)=>a.map(x=>`<option ${v==x?'selected':''}>${x}</option>`).join('');
- return `<div class="wrap sec"><h2>${me.profile?'Edit your profile':'Create your profile'}</h2>${me.profile?'':steps(2)}<form class="form" onsubmit="return saveProfile(event)">
-<label>Full name<input name="n" required maxlength="60" value="${esc(p.n||me.name)}"></label><div class="two"><label>Gender<select name="g">${o(['Female','Male'],p.g)}</select></label><label>Age<input name="a" type="number" min="18" max="70" required value="${esc(p.a||'')}"></label></div>
-<div class="two"><label>City, country<input name="c" required maxlength="60" value="${esc(p.c||'')}"></label><label>Marital status<select name="m">${o(['Never married','Divorced','Widowed'],p.m)}</select></label></div>
-<div class="two"><label>Education<input name="e" required maxlength="60" value="${esc(p.e||'')}"></label><label>Occupation<input name="j" required maxlength="60" value="${esc(p.j||'')}"></label></div>
-<label>About you<textarea name="x" rows="3" required maxlength="400">${esc(p.x||'')}</textarea></label><label>Looking for<textarea name="w" rows="2" required maxlength="300">${esc(p.w||'')}</textarea></label>
-${me.consent?'':`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="agree" required style="width:auto"> <span>I am 18 or older and I agree to: <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>`}
-<div class="row"><button class="btn">${me.profile?'Save changes':'Save and continue to payment'}</button>${me.profile?`<button type="button" class="btn ol" onclick="go('profile')">Cancel</button>`:''}</div></form></div>`}
-const VIEWS={
-home:()=>`<section class="hero"><div class="wrap hero-in"><div class="hero-txt"><div class="kicker">Rishta Connect Global</div><h1>${t('find')}</h1><div class="orn"><i></i></div><p>${t('tag')}.<br><span>Verified profiles, trusted brokers and private chat for families across the globe.</span></p><div class="badges"><span>Trusted</span><span>Safe</span><span>Genuine</span></div><div class="row cta"><button class="btn gd big" onclick="${me?"go('profile')":'login()'}">${t('start')}</button><button class="btn ol big" onclick="go('plans')">${t('plans')}</button></div></div><div class="hero-art">${ART}</div></div></section>
-<div class="wrap"><div class="trust"><div><i>${ico('ok')}</i>Verified profiles</div><div><i>${ico('lock')}</i>Secure payment by Moyasar</div><div><i>${ico('chat')}</i>Private, moderated chat</div><div><i>${ico('flag')}</i>Block and report tools</div></div></div>
-<div class="wrap sec"><h2 class="sh">Why families trust us</h2><p class="sub">A respectful place to meet, with your family's peace of mind built in.</p><div class="grid why"><div class="card"><div class="ic">${ico('ok')}</div><h3>Verified badges</h3><p class="mu">Our team checks identity, photo and background before a badge is shown.</p></div><div class="card"><div class="ic">${ico('eye')}</div><h3>Private by design</h3><p class="mu">Your photo stays hidden unless you choose to show it. Your email is never shown to members.</p></div><div class="card"><div class="ic">${ico('chat')}</div><h3>Safe conversations</h3><p class="mu">Private chat with block and report tools, and every report is reviewed by our team.</p></div><div class="card"><div class="ic">${ico('card')}</div><h3>Secure payment</h3><p class="mu">Pay by mada, Visa or Mastercard through Moyasar. We never see your card number.</p></div></div></div>
-<div class="wrap sec how"><h2 class="sh">How it works</h2><div class="grid"><div class="card"><h3>1. Sign in</h3><p class="mu">Continue with your Google account.</p></div><div class="card"><h3>2. Create your profile</h3><p class="mu">Tell us about yourself and what you seek.</p></div><div class="card"><h3>3. Activate</h3><p class="mu">Pay securely by card (mada, Visa or Mastercard). Your profile goes live as soon as the payment is confirmed.</p></div><div class="card"><h3>4. Connect</h3><p class="mu">Browse verified members or work with a broker.</p></div></div></div>
-${(D.brokers||[]).length?`<div class="wrap sec"><div class="row sp"><h2>Trusted brokers</h2><button class="btn ol s" onclick="go('brokers')">See all</button></div><div class="grid">${D.brokers.slice(0,3).map((b,i)=>`<div class="card"><div class="row"><div class="av">${ini(b.n)}</div><div><b>${esc(b.n)}</b> <span class="tag v">Verified</span><div class="mu">${esc(b.c)}</div></div></div><button class="btn ol w" style="margin-top:12px" onclick="go('broker',${i})">View profile</button></div>`).join('')}</div></div>`:''}
-<div class="wrap sec" id="gal" hidden><h2 class="sh">Where good beginnings start</h2><div class="gal">${[1,2,3].map(n=>`<figure><img src="/img/couple-${n}.jpg" alt="A happy couple" loading="lazy" onload="document.getElementById('gal').hidden=false" onerror="this.parentNode.remove()"></figure>`).join('')}</div></div>
-<section class="band"><div class="wrap"><h2>${t('tag')}</h2><p>Verified profiles, trusted brokers and private chat for families across the globe.</p><button class="btn gd big" onclick="${me?"go('profile')":'login()'}">${t('start')}</button></div></section>`,
-plans:()=>`<div class="wrap sec"><h2>Membership</h2><p class="mu" style="max-width:40em">Anyone can create a profile for free. A membership activates it so you appear in search and can browse and message members. Pay once per period; nothing renews by itself.</p><div class="grid">${PL.map(p=>`<div class="plan ${p.id=='prem'?'sel':''}"><h3>${esc(p.n)}</h3><div><b style="font-size:26px">${p.p} ${esc(p.cur)}</b> <span class="mu">/ ${p.m} month${p.m>1?'s':''}</span></div><ul class="mu">${p.f.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><button class="btn ${p.id=='prem'?'gd':'ol'} w" onclick="choosePlan('${p.id}')">Choose ${esc(p.n)}</button></div>`).join('')||'<p class="mu">Loading plans…</p>'}</div><p class="mu" style="margin-top:16px">Pay by mada, Visa or Mastercard through Moyasar. We never see your card number. See the <a href="/terms" target="_blank" rel="noopener">Terms</a> for refunds.</p></div>`,
-search:()=>{const f=A||{},mp=D.mp;return `<div class="wrap sec"><div class="row sp"><h2>Search profiles</h2><button class="btn ol s" onclick="go('shortlist')">My shortlist</button></div>${lockMsg()}
-<form class="two" style="margin-bottom:16px" onsubmit="return doSearch(event)"><select name="g" aria-label="Gender"><option value="">Any gender</option><option ${f.g=='Female'?'selected':''}>Female</option><option ${f.g=='Male'?'selected':''}>Male</option></select><select name="m" aria-label="Marital status"><option value="">Any marital status</option>${['Never married','Divorced','Widowed'].map(x=>`<option ${f.m==x?'selected':''}>${x}</option>`).join('')}</select><input name="c" placeholder="City" maxlength="40" value="${esc(f.c||'')}"><input name="e" placeholder="Education" maxlength="40" value="${esc(f.e||'')}"><input name="j" placeholder="Occupation" maxlength="40" value="${esc(f.j||'')}"><div class="two"><input name="lo" type="number" min="18" max="70" placeholder="Min age" value="${esc(f.lo||'')}"><input name="hi" type="number" min="18" max="70" placeholder="Max age" value="${esc(f.hi||'')}"></div><button class="btn">Apply filters</button><button type="button" class="btn ol" onclick="go('search')">Clear</button></form>
-${mp?`<p class="mu">${mp.total} member${mp.total==1?'':'s'} found</p>`:''}<div class="grid">${(D.members||[]).map(mcard).join('')||(D.lock?'':'<p class="mu">No members match yet. Widen your filters or check back soon.</p>')}</div>
-${mp&&mp.pages>1?`<div class="pg"><button class="btn ol s" ${mp.page<2?'disabled':''} onclick="goPage(${mp.page-1})">Previous</button><span class="mu">Page ${mp.page} of ${mp.pages}</span><button class="btn ol s" ${mp.page>=mp.pages?'disabled':''} onclick="goPage(${mp.page+1})">Next</button></div>`:''}</div>`},
-shortlist:()=>`<div class="wrap sec"><div class="row sp"><h2>My shortlist</h2><button class="btn ol s" onclick="go('search')">Back to search</button></div>${lockMsg()}<div class="grid">${(D.members||[]).map(mcard).join('')||(D.lock?'':'<p class="mu">Nobody saved yet. Use "Save" on a profile to keep it here.</p>')}</div></div>`,
-member:()=>{const m=D.m1;return `<div class="wrap sec"><div class="card" style="max-width:600px"><div class="row">${avt(m,'lg')}<div><h2 style="margin:0">${esc(m.n)}</h2>${m.verified?'<span class="tag v">Verified</span>':'<span class="tag">Unverified</span>'}<div class="mu">${m.a} yrs · ${esc(m.c)}</div></div></div>
-<p style="margin-top:14px"><b>Marital status:</b> ${esc(m.m)}<br><b>Education:</b> ${esc(m.e)}<br><b>Occupation:</b> ${esc(m.j)}</p><p>${esc(m.x)}</p><p class="mu">Looking for: ${esc(m.w)}</p>
-<div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" onclick="startChat(D.m1.id,D.m1.n,'member')">Send message</button><button class="btn ol" onclick="toggleSl('${m.id}',${m.sl},'member')">${m.sl?'Remove from shortlist':'Save'}</button><button class="btn ol" onclick="reportUser({id:D.m1.id,n:D.m1.n,source:'search'})">Report</button></div><p class="mu">Safety tip: keep conversations on the site and never send money. <a href="/safety" target="_blank" rel="noopener">Read more</a></p><button class="btn ol s" onclick="go(A0.v,A0.a)">Back</button></div></div>`},
-brokers:()=>{const L=D.brokers||[];return `<div class="wrap sec"><div class="row sp"><h2>Verified brokers</h2><button class="btn ol" onclick="${me?"go('apply')":'login()'}">Become a broker</button></div><p class="mu">Matrimonial brokers approved by our team who manage introductions on your behalf.</p><div class="grid">${L.map((b,i)=>`<div class="card"><div class="row"><div class="av">${ini(b.n)}</div><div><b>${esc(b.n)}</b> <span class="tag v">Verified</span><div class="mu">${esc(b.c)}</div><div class="mu">${esc(b.e)} experience</div>${rateLine(b.rating)}</div></div><button class="btn ol w" style="margin-top:12px" onclick="go('broker',${i})">View profile</button></div>`).join('')||'<p class="mu">No brokers have been approved yet.</p>'}</div></div>`},
-broker:()=>{const b=(D.brokers||[])[A];if(!b)return VIEWS.brokers();return `<div class="wrap sec"><div class="card" style="max-width:560px"><div class="row"><div class="av" style="width:80px;height:80px;font-size:28px">${ini(b.n)}</div><div><h2 style="margin:0">${esc(b.n)}</h2><span class="tag v">Verified</span><div class="mu">Matrimonial broker</div></div></div><p><b>Location:</b> ${esc(b.c)}<br><b>Experience:</b> ${esc(b.e)}<br><b>Languages:</b> ${esc(b.l)}<br><b>Specialization:</b> ${esc(b.s)}</p><p>${esc(b.x)}</p><div class="row"><button class="btn" style="flex:1" onclick="contactBroker(${A})">Contact broker</button><button class="btn ol" onclick="reportBroker(${A})">Report</button></div></div>${reviewsSec(A)}</div>`},
-apply:()=>{const b=me.broker,st=b&&b.status;const msg={pending:'Your application is under review. We will approve it once your details are checked.',approved:'You are a verified broker. Clients reach you through Messages.',suspended:'Your broker account is suspended. Contact support for help.',rejected:'Your application was not approved.'};
- const form=`<form class="form" onsubmit="return applyBroker(event)"><label>Full name<input name="n" required maxlength="60" value="${esc(me.name)}"></label><label>City, country<input name="c" required maxlength="60"></label><div class="two"><label>Experience (for example 5 years)<input name="e" required maxlength="30"></label><label>Languages<input name="l" required maxlength="60"></label></div><label>Specialization<input name="s" required maxlength="120"></label><label>About you<textarea name="x" rows="3" required maxlength="400"></textarea></label><button class="btn">${st=='rejected'?'Apply again':'Submit application'}</button></form>`;
- return `<div class="wrap sec"><h2>Broker account</h2>${st?`<div class="card" style="max-width:560px;margin-bottom:16px"><span class="tag ${st=='approved'?'v':''}">${esc(st)}</span><p>${msg[st]}</p>${b.reason?`<p class="mu">Reason: ${esc(b.reason)}</p>`:''}${st=='suspended'?(me.appeal&&me.appeal.broker?'<span class="tag">Appeal sent</span>':`<button class="btn ol" onclick="appealForm('broker')">Appeal this decision</button>`):''}${st=='approved'?`<button class="btn" onclick="go('msgs')">Open messages</button>`:''}</div>`:'<p class="mu">Brokers are reviewed by our team before they are listed or shown as Verified.</p>'}${!st||st=='rejected'?form:''}</div>`},
-notifs:()=>{const N=(D.notifs||{}).rows||[],W=D.warns||[],AP=D.appeals||[];
- const kind={suspension:'Account suspension',warning:'Warning',broker:'Broker suspension'};
- return `<div class="wrap sec"><h2>Alerts</h2>
-${W.length?`<h3>Warnings on your account</h3>${W.map(w=>`<div class="card" style="margin-bottom:8px"><p>${esc(w.message)}</p><div class="mu">${new Date(w.at).toLocaleDateString()}</div>${w.appealed?'<span class="tag">Appeal sent</span>':`<button class="btn ol s" onclick="appealForm('warning',${w.id})">Appeal this warning</button>`}</div>`).join('')}`:''}
-<h3 style="margin-top:20px">Notifications</h3>${N.map(n=>`<div class="card" style="margin-bottom:8px"><div class="row sp"><b>${esc(n.title)}${n.unread?' <span class="tag">New</span>':''}</b><span class="mu">${new Date(n.at).toLocaleString()}</span></div><p>${esc(n.body)}</p></div>`).join('')||'<p class="mu">No notifications yet.</p>'}
-${AP.length?`<h3 style="margin-top:24px">Your appeals</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>About</th><th>Status</th><th>Reviewer note</th></tr>${AP.map(a=>`<tr><td>${new Date(a.created_at).toLocaleDateString()}</td><td>${kind[a.kind]||esc(a.kind)}</td><td><span class="tag ${a.status=='overturned'?'v':''}">${a.status=='open'?'Under review':a.status=='overturned'?'Successful':'Decision stands'}</span></td><td class="mu">${esc(a.note||'')}</td></tr>`).join('')}</table></div>`:''}</div>`},
-msgs:()=>{const L=D.chats||[],BL=D.blocks||[];return `<div class="wrap sec"><h2>Messages</h2><div class="grid">${L.map(c=>`<div class="card" style="cursor:pointer" onclick="go('chat',{id:${c.id}})"><div class="row"><div class="av">${ini(c.with.n)}</div><div><b>${esc(c.with.n)}</b> ${c.with.kind=='broker'?'<span class="tag v">Broker</span>':''}${c.unread?` <span class="tag">${c.unread} new</span>`:''}<div class="mu">${esc((c.last.mine?'You: ':'')+c.last.body.slice(0,60))}</div></div></div></div>`).join('')||'<p class="mu">No conversations yet. Message a member or contact a broker.</p>'}</div>${BL.length?`<h3 style="margin-top:24px">Blocked members</h3>${BL.map((b,i)=>`<div class="row sp card" style="margin-bottom:8px"><span>${esc(b.n)}</span><button class="btn ol s" onclick="unblock(${i})">Unblock</button></div>`).join('')}`:''}</div>`},
-chat:()=>{const c=D.chat;return `<div class="wrap sec"><div class="card" style="max-width:600px"><div class="row sp"><div class="row"><div class="av">${ini(c.with.n)}</div><b>${esc(c.with.n)}</b>${c.with.kind=='broker'?' <span class="tag v">Broker</span>':''}</div><div class="row"><button class="btn ol s" onclick="reportUser()">Report</button><button class="btn ol s" onclick="blockUser()">Block</button></div></div><div class="chat" id="chatbox"></div><form class="row" onsubmit="return sendMsg(event)"><input name="t" maxlength="1000" placeholder="Type a message…" autocomplete="off" required><button class="btn">Send</button></form><p class="mu">Never send money or bank details to someone you have not met in person with your family.</p></div></div>`},
-profile:()=>{const p=me.profile;if(!p||A=='edit')return profileForm(p);
- const m=me.membership;return `<div class="wrap sec"><h2>My profile</h2>${steps(active()?4:3)}<div class="card" style="max-width:560px"><div class="row">${avt({n:p.n,id:'me',ph:me.photo&&me.photo.has})}<div><b>${esc(p.n)}</b> <span class="tag ${active()?'v':''}">${active()?'Active':'Pending payment'}</span><div class="mu">${p.a} yrs · ${esc(p.c)} · ${esc(p.j)}</div></div></div><p class="mu">${esc(p.m||'')} · ${esc(p.e)}</p><p>${esc(p.x)}</p><p class="mu">Looking for: ${esc(p.w)}</p><p>${vtags(me.verification)}</p>
-${active()?`<p class="mu">${(PL.find(x=>x.id==m.plan)||{}).n||'Membership'} active until ${new Date(m.expires_at).toLocaleDateString()}</p>`:`<button class="btn gd w" onclick="go('pay')">Complete payment to activate</button>`}
-<div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn ol" onclick="go('profile','edit')">Edit profile</button><button class="btn ol" onclick="go('settings')">Settings and photo</button>${active()?`<button class="btn ol" onclick="go('pay')">Renew or extend</button>`:''}</div></div></div>`},
-settings:()=>{const ph=me.photo||{},m=me.membership;return `<div class="wrap sec"><h2>Settings</h2>
-<div class="card" style="max-width:600px;margin-bottom:14px"><h3>Account</h3><p class="mu">Signed in as ${esc(me.email)}</p>${me.profile?`<p>${active()?`Membership active until ${new Date(m.expires_at).toLocaleDateString()}.`:'Your membership is not active.'}</p><div class="row"><button class="btn ol s" onclick="go('profile','edit')">Edit profile</button><button class="btn ol s" onclick="go('pay')">${active()?'Renew or extend':'Activate'}</button></div>`:'<button class="btn" onclick="go(\'profile\')">Create your profile</button>'}</div>
-${me.profile?`<div class="card" style="max-width:600px;margin-bottom:14px"><h3>Profile photo</h3><div class="row">${avt({n:me.profile.n,id:'me',ph:ph.has},'lg')}<div>${ph.has?`<p class="mu" style="margin:0 0 8px">${ph.visible?'Shown to active members.':'Hidden. Only you can see it.'}</p><label class="sw"><input type="checkbox" ${ph.visible?'checked':''} onchange="photoVis(this.checked)"> Show my photo to members</label>`:'<p class="mu" style="margin:0">No photo yet. Your photo stays hidden until you choose to show it.</p>'}</div></div>
-<div class="row" style="margin-top:10px;flex-wrap:wrap"><label class="btn ol s" style="cursor:pointer">${ph.has?'Replace photo':'Upload photo'}<input type="file" accept="image/*" hidden onchange="pickPhoto(this)"></label>${ph.has?'<button class="btn ol s" onclick="photoRemove()">Remove photo</button>':''}</div><p class="mu">Use a clear photo of yourself. A new photo is checked by our team before it counts toward your Photo verification.</p></div>`:''}
-<div class="card" style="max-width:600px;margin-bottom:14px"><h3>Language</h3><select class="lang" style="width:100%" aria-label="Language" onchange="setLang(this.value)">${[['en','English'],['ur','اردو'],['ar','العربية']].map(([c,n])=>`<option value="${c}" ${lang==c?'selected':''}>${n}</option>`).join('')}</select></div>
-<div class="card" style="max-width:600px;margin-bottom:14px"><h3>Your data</h3><p class="mu">Download a copy of everything we hold about you.</p><button class="btn ol s" onclick="exportData()">Download my data</button> <span class="mu"><a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a></span></div>
-<div class="card danger-box" style="max-width:600px"><h3>Delete my account</h3><p class="mu">This permanently removes your profile, photo, messages and shortlist. ${active()?'Your remaining membership time is not refunded. ':''}Payment records are kept without your email, as the law requires. This cannot be undone.</p><form class="form" onsubmit="return delAccount(event)"><label>Type DELETE to confirm<input name="confirm" autocomplete="off" required></label><button class="btn" style="background:#b3261e;color:#fff">Delete my account</button></form></div></div>`},
-pay:()=>{if(!me.profile)return VIEWS.profile();const sel=PL.some(p=>p.id==A)?A:'prem',x=PL.find(p=>p.id==sel);if(!x)return '<div class="wrap sec"><p class="mu">Loading plans…</p></div>';return `<div class="wrap sec"><h2>Activate your profile</h2>${steps(3)}<div class="grid">${PL.map(p=>`<div class="plan ${p.id==sel?'sel':''}" onclick="go('pay','${p.id}')"><h3>${p.n}</h3><b>${p.p} ${esc(p.cur)}</b> <span class="mu">/ ${p.m} month${p.m>1?'s':''}</span><ul class="mu">${p.f.map(f=>`<li>${f}</li>`).join('')}</ul></div>`).join('')}</div>
-<div class="form" style="margin-top:20px"><button class="btn gd w" id="paybtn" onclick="startPay('${sel}')">Pay ${x.p} ${esc(x.cur)} securely</button>${cfg&&cfg.paymentMode=='test'?'<div class="lock">Test mode: no real money is charged. Use card 4111 1111 1111 1111 with any future expiry and any CVC.</div>':''}<p class="mu">Your card details go straight to Moyasar and never reach our servers. Your profile activates automatically once the payment is confirmed.</p></div></div>`},
-payresult:()=>{const p=D.pr||{};const s=p.status;return `<div class="wrap sec"><div class="card" style="max-width:520px"><h2>${s=='paid'?'Payment confirmed':s=='failed'?'Payment not completed':'Confirming your payment…'}</h2><p class="mu">${s=='paid'?'Your profile is now active.':s=='failed'?'No money was taken. You can try again.':'This usually takes a few seconds. Keep this page open.'}</p>${s=='paid'?`<button class="btn w" onclick="go('search')">Browse members</button>`:s=='failed'?`<button class="btn w" onclick="go('pay')">Try again</button>`:''}</div></div>`},
-admin:()=>{const P=D.pay||[],R=D.ver||[],MB=D.mem||[],BK=D.brk||[],RP=D.rep||{open:[],resolved:[]},APL=D.apl||{open:[],resolved:[]},sum=a=>a.reduce((s,p)=>s+p.amount,0),paid=P.filter(p=>p.status=='paid'),rf=P.filter(p=>p.status=='refunded');
- const q=R.map((r,i)=>[r,i]).filter(([r])=>!r.verified),vd=R.map((r,i)=>[r,i]).filter(([r])=>r.verified);
- const st=(n,l)=>`<div class="card"><div class="serif" style="font-size:28px;color:var(--mr)">${n}</div><div class="mu">${l}</div></div>`;
- const ck=(i,k,l)=>{const on=R[i][k];return `<button class="btn s ${on?'':'ol'}" style="margin:2px" onclick="vck(${i},'${k}')">${on?'✓ ':''}${l}</button>`};
- return `<div class="wrap sec"><h2>Admin panel</h2><div class="grid" style="margin-bottom:22px">${st(R.length,'Members with profiles')}${st(vd.length,'Verified')}${st(q.length,'Awaiting verification')}${st(sum(paid)+' SAR','Collected')}${st(sum(rf)+' SAR','Refunded')}${st(P.length,'Transactions')}${st(MB.filter(m=>m.status=='suspended').length,'Suspended')}${st(BK.filter(b=>b.status=='pending').length,'Broker applications')}${st(RP.open.length,'Open reports')}${st(APL.open.length,'Open appeals')}</div>
-${appealSec()}<h3 style="margin-top:24px">Reports to review (${RP.open.length})</h3>${RP.open.map((r,i)=>`<div class="card" style="margin-bottom:12px"><div class="row sp"><div><span class="tag">${esc(r.category)}</span> <span class="tag">via ${({search:'search results',broker:'broker page'})[r.source]||'chat'}</span> <b>${esc(r.reported.n)}</b> <span class="mu">${esc(r.reported.email)}</span></div><span class="mu">${new Date(r.created_at).toLocaleString()}</span></div><p class="mu">Reported by ${esc(r.reporter.n)} (${esc(r.reporter.email)}) · ${r.reported.total} report${r.reported.total>1?'s':''} against this member · ${r.reported.warnings} active warning${r.reported.warnings==1?'':'s'} · account ${esc(r.reported.status)}</p>${r.details?`<p>${esc(r.details)}</p>`:''}${r.evidence.length?`<details><summary>Conversation snapshot (${r.evidence.length} messages)</summary><div class="chat">${r.evidence.map(m=>`<div class="b ${m.from=='reporter'?'me':''}">${esc(m.body)}</div>`).join('')}</div><p class="mu">Right-aligned messages were sent by the reporter.</p></details>`:'<p class="mu">No conversation attached.</p>'}<div class="row" style="margin-top:8px"><button class="btn ol s" onclick="rres(${i},'dismiss')">Dismiss</button><button class="btn ol s" onclick="rres(${i},'warn')">Warn member</button><button class="btn s" onclick="rres(${i},'suspend')">Suspend member</button></div></div>`).join('')||'<p class="mu">No open reports.</p>'}${RP.resolved.length?`<details><summary>Recently resolved (${RP.resolved.length})</summary><div style="overflow-x:auto"><table><tr><th>Date</th><th>Member</th><th>Reason</th><th>Outcome</th><th>Note</th></tr>${RP.resolved.map(r=>`<tr><td>${new Date(r.resolved_at).toLocaleDateString()}</td><td>${esc(r.reported.email)}</td><td>${esc(r.category)}</td><td><span class="tag ${r.outcome=='dismiss'?'v':''}">${esc(r.outcome)}</span></td><td class="mu">${esc(r.note)}</td></tr>`).join('')}</table></div></details>`:''}
-<h3 style="margin-top:24px">Members (${MB.length})</h3>${MB.length?`<div style="overflow-x:auto"><table><tr><th>Member</th><th>Status</th><th>Membership</th><th></th></tr>${MB.map((m,i)=>`<tr><td>${esc(m.name||m.email)}<div class="mu">${esc(m.email)}</div></td><td><span class="tag ${m.status=='approved'?'v':''}">${esc(m.status)}</span>${m.reason?`<div class="mu">${esc(m.reason)}</div>`:''}</td><td class="mu">${m.membership.active?'Active':'None'}</td><td>${m.email==me.email?'':(m.status!='suspended'?`<button class="btn ol s" onclick="msus(${i})">Suspend</button> `:'')+(m.status!='approved'?`<button class="btn s" onclick="mapp(${i})">${m.status=='suspended'?'Reinstate':'Approve'}</button>`:'')}</td></tr>`).join('')}</table></div>`:'<p class="mu">No members yet.</p>'}
-<h3 style="margin-top:24px">Broker applications (${BK.length})</h3>${BK.length?`<div style="overflow-x:auto"><table><tr><th>Broker</th><th>Details</th><th>Status</th><th></th></tr>${BK.map((b,i)=>`<tr><td>${esc(b.n)}<div class="mu">${esc(b.email)}</div></td><td class="mu">${esc(b.c)} · ${esc(b.e)} · ${esc(b.l)}<br>${esc(b.s)}</td><td><span class="tag ${b.status=='approved'?'v':''}">${esc(b.status)}</span>${b.reason?`<div class="mu">${esc(b.reason)}</div>`:''}</td><td>${b.status!='approved'?`<button class="btn s" onclick="bapp(${i})">${b.status=='suspended'?'Reinstate':'Approve'}</button> `:''}${b.status=='pending'?`<button class="btn ol s" onclick="brej(${i})">Reject</button>`:''}${b.status=='approved'?`<button class="btn ol s" onclick="bsus(${i})">Suspend</button>`:''}</td></tr>`).join('')}</table></div>`:'<p class="mu">No applications yet.</p>'}
-<h3 style="margin-top:24px">Broker reviews (${(D.rvw||[]).length})</h3>${(D.rvw||[]).length?`<div style="overflow-x:auto"><table><tr><th>Broker</th><th>Review</th><th>Status</th><th></th></tr>${D.rvw.map((v,i)=>`<tr><td>${esc(v.broker.n)}</td><td>${stars(v.rating)}<div data-notr style="max-width:340px;white-space:pre-wrap;overflow-wrap:anywhere">${esc(v.body)||'<span class="mu">(no text)</span>'}</div><div class="mu">by ${esc(v.reviewer.n)} (${esc(v.reviewer.email)}) · ${new Date(v.created_at).toLocaleDateString()}</div>${v.flags?`<div style="color:var(--mr)"><b>${v.flags} flagged:</b> <span data-notr>${v.flag_reasons.map(esc).join(' · ')}</span></div>`:''}</td><td><span class="tag ${v.status=='published'?'v':''}">${esc(v.status)}</span>${v.hidden_reason?`<div class="mu" data-notr>${esc(v.hidden_reason)}</div>`:''}</td><td>${v.status=='published'?`<button class="btn ol s" onclick="rvHide(${i})">Hide</button>`:`<button class="btn s" onclick="rvShow(${i})">Restore</button>`}</td></tr>`).join('')}</table></div>`:'<p class="mu">No reviews yet.</p>'}
-<h3 style="margin-top:24px">Verification queue (${q.length})</h3>${q.length?`<div class="grid">${q.map(([r,i])=>`<div class="card"><b>${esc(r.name||r.email)}</b>${r.revoked_at?' <span class="tag">Revoked</span>':''}<div class="mu">${esc(r.email)}</div><div>${ck(i,'identity','Identity')}${ck(i,'photo','Photo')}${ck(i,'background','Background')}</div>${r.has_photo?`<button class="btn ol s" style="margin:4px 2px" onclick="viewPhoto(${i})">View photo</button>`:'<div class="mu">No photo uploaded</div>'}<button class="btn gd w" style="margin-top:8px" onclick="vall(${i})">Approve all</button></div>`).join('')}</div>`:'<p class="mu">The queue is clear.</p>'}
-<h3 style="margin-top:24px">Verified members (${vd.length})</h3>${vd.length?`<div style="overflow-x:auto"><table>${vd.map(([r,i])=>`<tr><td>${esc(r.name||r.email)}<div class="mu">${esc(r.email)}</div></td><td><span class="tag v">Verified</span></td><td><button class="btn ol s" onclick="vrev(${i})">Revoke verification</button></td></tr>`).join('')}</table></div>`:'<p class="mu">No verified members yet.</p>'}
-<h3 style="margin-top:24px">Payments and transactions</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>Member</th><th>Plan</th><th>Amount</th><th>Status</th><th></th></tr>${P.map((p,i)=>`<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${esc(p.email)}</td><td>${esc(p.plan)}</td><td>${p.amount} ${esc(p.currency)}</td><td><span class="tag ${p.status=='paid'?'v':''}">${esc(p.status)}</span></td><td>${p.status=='paid'?`<button class="btn ol s" onclick="refund(${i})">Refund</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">No transactions yet.</td></tr>'}</table></div>${backupSec()}${auditSec()}</div>`}};
+   Switching language is reversible: the original English is remembered, so choosing English again restores it
+   without reloading. Text typed by people (names, "about me", chat messages, reviews) is never translated:
+   it is marked data-notr, or sits inside .chat / .b / textarea / input.
 
-/* ---- actions ---- */
-function closeM(){$('#modal').innerHTML=''}
-function login(n=0){$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Welcome</h2><p class="mu">Sign in to create your profile.</p><div id="gbtn" style="min-height:44px"></div><br><button class="btn w" id="abtn" style="background:#000;color:#fff" disabled onclick="appleLogin()">${cfg&&cfg.appleClientId?'Continue with Apple':'Apple sign-in is not configured'}</button><div id="sihint" class="lock" style="display:none;margin-top:12px"></div><p class="mu" style="margin-top:12px">By continuing you agree to: <a href="/terms" target="_blank" rel="noopener">Terms</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></p></div></div>`;initG(0);prepApple(0)}
-function siHint(m){const h=$('#sihint');if(h&&m){h.style.display='block';h.innerHTML=(h.dataset.t?h.innerHTML+'<br>':'')+esc(m);h.dataset.t=1}}
-function siCheck(){if(!cfg)return;const o=location.origin;
- if(cfg.baseUrl&&o!==cfg.baseUrl)siHint('You opened the site at '+o+' but it is set up for '+cfg.baseUrl+'. Google and Apple only work at the registered address. Open '+cfg.baseUrl+' instead.');
- if(!/^https:/.test(o)&&!/^http:\/\/localhost/.test(o))siHint('Sign-in needs a secure address starting with https://.');
- if(!cfg.googleOk)siHint('Google sign-in is not set up: GOOGLE_CLIENT_ID in the site settings must end with .apps.googleusercontent.com.')}
-function initG(n){if(!window.google||!cfg){if(n<30)setTimeout(()=>initG(n+1),300);else{toast('Google sign-in could not load. Check your connection.');siHint('The Google sign-in script did not load. Check the internet connection, and that nothing (ad blocker, firewall) blocks accounts.google.com.')}return}
- siCheck();
- google.accounts.id.initialize({client_id:cfg.googleClientId,callback:r=>act(async()=>{await api('/api/auth/google',{credential:r.credential});me=await api('/api/me');closeM();go(me.profile?(active()?'search':'pay'):'profile')})});
- google.accounts.id.renderButton($('#gbtn'),{theme:'filled_black',size:'large',text:'continue_with',width:300})}
-let appleReady=false;
-async function prepApple(n){const b=$('#abtn');appleReady=false;if(b)b.disabled=true;if(!cfg||!cfg.appleClientId)return;
- if(!window.AppleID){if(n<30)setTimeout(()=>prepApple(n+1),300);else siHint('The Apple sign-in script did not load. Check the internet connection.');return}
- try{const {nonce}=await api('/api/auth/apple/nonce');AppleID.auth.init({clientId:cfg.appleClientId,scope:'name email',redirectURI:cfg.appleRedirectUri,state:'rcg',nonce,usePopup:true});appleReady=true;const b2=$('#abtn');if(b2)b2.disabled=false}catch(e){siHint('Apple sign-in could not start. The Services ID and Return URL in the site settings must match what is registered with Apple.')}}
-function appleLogin(){if(!appleReady)return toast('Apple sign-in is still loading. Try again in a moment.');appleReady=false; // signIn() must run straight from the click so the popup is not blocked; the nonce was fetched beforehand
- AppleID.auth.signIn().then(async r=>{const nm=r.user&&r.user.name?[r.user.name.firstName,r.user.name.lastName].filter(Boolean).join(' '):'';
-  await api('/api/auth/apple',{id_token:r.authorization.id_token,name:nm});me=await api('/api/me');closeM();go(me.profile?(active()?'search':'pay'):'profile')})
- .catch(e=>{if(e&&e.message)toast(e.message);else if(!e||(e.error!=='popup_closed_by_user'&&e.error!=='user_cancelled_authorize'))toast('Apple sign-in did not complete. Please try again.');prepApple(0)})}
-function logout(){act(async()=>{await api('/api/auth/logout',{});me=null;go('home')})}
-function doSearch(e){e.preventDefault();const f=Object.fromEntries([...new FormData(e.target)].filter(([,v])=>v));go('search',f);return false}
-function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.agree=!!f.agree;const had=!!(me&&me.profile);act(async()=>{await api('/api/profile',f);me=await api('/api/me');if(had){toast('Profile saved');go('profile')}else go('pay')});return false}
-function photoVis(on){act(async()=>{await api('/api/photo/visibility',{visible:on});me=await api('/api/me');go('settings')})}
-function photoRemove(){if(!confirm('Remove your photo?'))return;act(async()=>{await api('/api/photo/remove',{});me=await api('/api/me');go('settings')})}
-function pickPhoto(inp){const f=inp.files[0];inp.value='';if(!f)return;act(async()=>{
- const bmp=await createImageBitmap(f).catch(()=>{throw new Error('We could not read that picture. Please choose a JPEG or PNG photo.')});
- if(Math.min(bmp.width,bmp.height)<64)throw new Error('That picture is too small. Choose one at least 64 pixels wide.');
- const sc=Math.min(1,800/Math.max(bmp.width,bmp.height)),c=document.createElement('canvas');c.width=Math.round(bmp.width*sc);c.height=Math.round(bmp.height*sc);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
- const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));if(!blob)throw new Error('We could not prepare that picture.');
- const r=await fetch('/api/photo',{method:'POST',headers:{'content-type':'image/jpeg','x-requested-with':'fetch'},body:blob});
- if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'Upload failed. Try again.');
- me=await api('/api/me');toast('Photo saved. It stays hidden until you choose to show it to members.');go('settings')})}
-function exportData(){act(async()=>{const r=await fetch('/api/account/export',{headers:{'x-requested-with':'fetch'}});if(!r.ok)throw new Error('Could not prepare your data. Try again.');
- const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='my-rishta-data.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)})}
-function delAccount(e){e.preventDefault();const v=new FormData(e.target).get('confirm');if(!confirm('Delete your account for good? This cannot be undone.'))return false;act(async()=>{await api('/api/account/delete',{confirm:v});me=null;toast('Your account has been deleted.');go('home')});return false}
-function viewPhoto(i){const r=D.ver[i];$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Photo of ${esc(r.name||r.email)}</h2><img src="/api/admin/photo/${encodeURIComponent(r.email)}" alt="Member photo" style="width:100%;border-radius:12px"><div class="row" style="margin-top:12px"><button class="btn ol" onclick="closeM()">Close</button><button class="btn ol danger" onclick="adminPhotoRemove(${i})">Remove photo</button></div></div></div>`}
-function adminPhotoRemove(i){const r=D.ver[i],why=prompt(`Remove the photo of ${r.email}? Enter a reason (the member will see it):`);if(!why)return;act(async()=>{await api(`/api/admin/photo/${encodeURIComponent(r.email)}/remove`,{reason:why});closeM();await reloadAdmin()})}
-const MPF='https://cdn.moyasar.com/mpf/1.15.0/';
-let mpfP=null;
-function loadMpf(){if(window.Moyasar)return Promise.resolve();if(!mpfP)mpfP=new Promise((ok,no)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=MPF+'moyasar.css';document.head.appendChild(l);const s=document.createElement('script');s.src=MPF+'moyasar.js';s.onload=ok;s.onerror=()=>{mpfP=null;no(new Error('Could not load the secure payment form. Check your connection and try again.'))};document.head.appendChild(s)});return mpfP}
-function startPay(plan){const b=$('#paybtn'),label=b.textContent;b.disabled=true;b.textContent='Preparing secure payment…';
- act(async()=>{try{const [r]=await Promise.all([api('/api/checkout',{plan}),loadMpf()]);
-  $('#modal').innerHTML=`<div class="modal"><div class="card paycard" style="max-width:420px"><div class="row sp"><h2 style="margin:0">Pay ${r.amount/100} ${esc(r.currency)}</h2><button class="btn ol s" onclick="closeM()">Close</button></div>${cfg&&cfg.paymentMode=='test'?'<div class="lock" style="margin-top:10px">Test mode: no real money is charged. Use card 4111 1111 1111 1111 with any future expiry and any CVC.</div>':''}<div class="mysr-form" style="margin-top:12px"></div><p class="mu">Your card details go straight to Moyasar and never reach our servers. Your profile activates automatically once the payment is confirmed.</p></div></div>`;
-  Moyasar.init({element:'.mysr-form',amount:r.amount,currency:r.currency,description:r.description,publishable_api_key:r.publishable_key,callback_url:r.callback_url,metadata:r.metadata,methods:['creditcard'],supported_networks:['mada','visa','mastercard'],apply_coupon:false,language:lang=='ar'?'ar':'en',on_failure:e=>toast(String(e||'Payment failed. Please try again.'))});
-  b.disabled=false;b.textContent=label}catch(e){b.disabled=false;b.textContent=label;throw e}})}
-async function pollPay(id,n=0){try{D.pr=await api('/api/payments/'+encodeURIComponent(id))}catch(e){D.pr={status:'failed'}}
- if(D.pr.status=='paid'){me=await api('/api/me');if(window.Scene3D)Scene3D.pulse()}
- if(V=='payresult')render();
- if(D.pr.status=='pending'&&n<40)setTimeout(()=>pollPay(id,n+1),2000)}
-const msgHtml=m=>`<div class="b ${m.mine?'me':''}">${esc(m.body)}</div>`;
-function paintChat(){const b=$('#chatbox');if(!b||!D.chat)return;b.innerHTML=D.chat.messages.map(msgHtml).join('')||'<p class="mu">Say Assalamu Alaikum to start.</p>';b.scrollTop=1e9}
-function startPoll(){clearInterval(chatT);chatT=setInterval(async()=>{if(V!='chat'||!D.chat||!D.chat.id)return;try{const ms=D.chat.messages,r=await api(`/api/chats/${D.chat.id}?after=${ms.length?ms[ms.length-1].id:0}`);if(r.messages.length){D.chat.messages.push(...r.messages);paintChat()}}catch(e){}},4000)}
-function startChat(uid,name,kind){if(!me)return login();go('chat',{to:uid,name,kind})}
-const chatWith=i=>startChat(D.members[i].id,D.members[i].n,'member');
-function rvStar(k){RV.rating=k;document.querySelectorAll('.pick button').forEach((b,j)=>{b.classList.toggle('on',j<k);b.setAttribute('aria-checked',String(j+1==k))})}
-function rvEdit(){const m=D.rv.mine;RV={rating:m.rating,edit:true,text:m.body||''};render()}
-function rvCancel(){RV={rating:D.rv.mine?D.rv.mine.rating:0,edit:false,text:''};render()}
-async function rvReload(i){const id=encodeURIComponent(D.brokers[i].id);D.rv=await api('/api/brokers/'+id+'/reviews');D.brokers=await api('/api/brokers');render()}
-function rvSubmit(i){if(!RV.rating)return toast('Choose a rating from 1 to 5 stars.');act(async()=>{const r=await api(`/api/brokers/${encodeURIComponent(D.brokers[i].id)}/reviews`,{rating:RV.rating,body:RV.text});toast(r.updated?'Review updated':'Thank you for your review');RV={rating:RV.rating,edit:false,text:''};await rvReload(i)})}
-function rvDelete(i){if(!confirm('Delete your review?'))return;act(async()=>{await api(`/api/brokers/${encodeURIComponent(D.brokers[i].id)}/reviews/delete`,{});RV={rating:0,edit:false,text:''};toast('Review deleted');await rvReload(i)})}
-function rvMore(i){act(async()=>{const r=await api(`/api/brokers/${encodeURIComponent(D.brokers[i].id)}/reviews?page=${D.rv.page+1}`);D.rv.rows=D.rv.rows.concat(r.rows);D.rv.page=r.page;render()})}
-function rvFlag(id){const r=prompt('What is wrong with this review?');if(!r)return;act(async()=>{await api(`/api/reviews/${id}/flag`,{reason:r});toast('Thank you. Our team will look at it.')})}
-function rvHide(i){const r=prompt('Hide this review? Enter a reason:');if(!r)return;act(async()=>{await api(`/api/admin/reviews/${D.rvw[i].id}/hide`,{reason:r});await reloadAdmin()})}
-function rvShow(i){act(async()=>{await api(`/api/admin/reviews/${D.rvw[i].id}/show`,{});await reloadAdmin()})}
-const contactBroker=i=>startChat(D.brokers[i].id,D.brokers[i].n,'broker');
-function sendMsg(e){e.preventDefault();const inp=e.target.t,v=inp.value.trim();if(!v)return false;inp.disabled=true;
- act(async()=>{try{const c=D.chat;if(c.id){const r=await api(`/api/chats/${c.id}/messages`,{body:v});c.messages.push({id:r.id,mine:true,body:v})}
-  else{const r=await api('/api/chats',{to:c.with.id,body:v});c.id=r.id;c.messages=(await api('/api/chats/'+r.id)).messages;startPoll()}
-  inp.value='';paintChat();if(window.Scene3D)Scene3D.pulse()}finally{inp.disabled=false;inp.focus()}});return false}
-function applyBroker(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));act(async()=>{await api('/api/broker/apply',f);me=await api('/api/me');toast('Application submitted');go('apply')});return false}
-const bem=i=>encodeURIComponent(D.brk[i].email);
-function bapp(i){act(async()=>{await api(`/api/admin/brokers/${bem(i)}/approve`,{});await reloadAdmin()})}
-function brej(i){const r=prompt(`Reject ${D.brk[i].email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/brokers/${bem(i)}/reject`,{reason:r});await reloadAdmin()})}
-function bsus(i){const r=prompt(`Suspend ${D.brk[i].email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/brokers/${bem(i)}/suspend`,{reason:r});await reloadAdmin()})}
-function blockUser(){if(!confirm(`Block ${D.chat.with.n}? You will no longer see each other in search or be able to message.`))return;act(async()=>{await api('/api/blocks',{user:D.chat.with.id});toast('Member blocked');go('msgs')})}
-function unblock(i){act(async()=>{await api('/api/blocks/remove',{user:D.blocks[i].id});go('msgs')})}
-let RT=null;
-function reportUser(t){if(!me)return login();RT=t||{id:D.chat.with.id,n:D.chat.with.n,source:'chat'};$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Report ${esc(RT.n)}</h2><form class="form" onsubmit="return submitReport(event)"><label>What happened?<select name="category"><option value="harassment">Harassment or abuse</option><option value="scam">Scam or asking for money</option><option value="fake">Fake or misleading profile</option><option value="inappropriate">Inappropriate content</option><option value="other">Something else</option></select></label><label>Details (optional)<textarea name="details" rows="3" maxlength="500"></textarea></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="block" checked style="width:auto"> Also block this member</label><p class="mu">${RT.source=='chat'?'An administrator will review the last 20 messages of this conversation. ':'An administrator will review your report. '}The member is not told who reported them.</p><button class="btn w">Send report</button></form></div></div>`}
-const reportMember=i=>reportUser({id:D.members[i].id,n:D.members[i].n,source:'search'});
-const reportBroker=i=>reportUser({id:D.brokers[i].id,n:D.brokers[i].n,source:'broker'});
-function submitReport(e){e.preventDefault();const f=new FormData(e.target),bl=!!f.get('block'),t=RT;act(async()=>{await api('/api/reports',{user:t.id,category:f.get('category'),details:f.get('details'),block:bl,source:t.source});closeM();toast('Report sent. Thank you.');if(bl)go(t.source=='chat'?'msgs':t.source=='search'?'search':'brokers',t.source=='search'?A:undefined)});return false}
-function rres(i,outcome){const r=D.rep.open[i],ask={dismiss:'Dismiss this report? Enter a note for the record:',warn:`Send ${r.reported.email} a warning? Enter a note for the record (the member will not see it):`,suspend:`Suspend ${r.reported.email}? Enter a note for the record (the member will not see it):`},n=prompt(ask[outcome]);if(!n)return;act(async()=>{await api(`/api/admin/reports/${r.id}/resolve`,{outcome,note:n});await reloadAdmin()})}
-function auditSec(){const X=D.aud||{rows:[],more:false,actions:[]},f=D.audF||{};
- return `<h3 style="margin-top:24px">Audit log</h3><form class="row" style="flex-wrap:wrap;margin-bottom:10px" onsubmit="return auditFind(event)"><select name="action" aria-label="Action" style="width:auto"><option value="">All actions</option>${X.actions.map(a=>`<option value="${esc(a)}" ${f.action==a?'selected':''}>${esc(a.replace(/-/g,' '))}</option>`).join('')}</select><input name="q" aria-label="Search" placeholder="Search target or reason" maxlength="60" value="${esc(f.q||'')}" style="width:auto;flex:1;min-width:160px"><button class="btn s">Filter</button><button type="button" class="btn ol s" onclick="auditExport()">Export CSV</button></form><div style="overflow-x:auto"><table><tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Reason</th></tr>${X.rows.map(r=>`<tr><td class="mu">${new Date(r.at).toLocaleString()}</td><td>${esc(r.admin)}</td><td><span class="tag">${esc(r.action.replace(/-/g,' '))}</span></td><td>${esc(r.target)}</td><td class="mu">${esc(r.reason)}</td></tr>`).join('')||'<tr><td colspan="5" class="mu">No entries match.</td></tr>'}</table></div>${X.more?'<button class="btn ol s" style="margin-top:10px" onclick="auditMore()">Load more</button>':''}<p class="mu">The log is append-only: entries cannot be edited or deleted through the app. Export uses the filters you last applied, and each export is recorded here.</p>`}
-const auditQS=(f,before)=>new URLSearchParams({...(f.action?{action:f.action}:{}),...(f.q?{q:f.q}:{}),...(before?{before}:{})});
-function auditExport(){const f=D.audF||{};act(async()=>{const r=await fetch('/api/admin/audit/export?'+auditQS(f),{headers:{'x-requested-with':'fetch'}});
- if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Export failed')}
- const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`audit-log-${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
- toast(r.headers.get('x-truncated')?'Exported the newest 50,000 entries. Narrow the filters to get the rest.':'Audit log exported')})}
-function auditFind(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));D.audF=f;act(async()=>{D.aud=await api('/api/admin/audit?'+auditQS(f));render()});return false}
-function auditMore(){const f=D.audF||{},last=D.aud.rows[D.aud.rows.length-1];act(async()=>{const r=await api('/api/admin/audit?'+auditQS(f,last.id));D.aud={...r,rows:D.aud.rows.concat(r.rows),actions:D.aud.actions};render()})}
-let AT=null;
-function appealForm(kind,ref){AT={kind,ref};const t={suspension:'Appeal your suspension',warning:'Appeal this warning',broker:'Appeal your broker suspension'}[kind];$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>${t}</h2><form class="form" onsubmit="return submitAppeal(event)"><label>Why should this decision be reviewed?<textarea name="message" rows="5" required minlength="20" maxlength="1000"></textarea></label><p class="mu">A different reviewer will read this. You will get a notification with the decision. You can appeal the same decision again only after 30 days.</p><button class="btn w">Send appeal</button></form></div></div>`}
-function submitAppeal(e){e.preventDefault();const m=new FormData(e.target).get('message');act(async()=>{await api('/api/appeals',{kind:AT.kind,ref:AT.ref,message:m});closeM();toast('Appeal sent');if(V=='notifs')await go('notifs');else{me=await api('/api/me');render()}});return false}
-function ackWarn(id){act(async()=>{await api(`/api/warnings/${id}/ack`,{});me=await api('/api/me');if(V=='notifs')D.warns=await api('/api/warnings');render()})}
-function appealSec(){const A=D.apl||{open:[],resolved:[]},kind={suspension:'Account suspension',warning:'Warning',broker:'Broker suspension'};
- return `<h3>Appeals to review (${A.open.length})</h3>${A.open.map((a,i)=>`<div class="card" style="margin-bottom:12px"><div class="row sp"><div><span class="tag">${kind[a.kind]||esc(a.kind)}</span> <b>${esc(a.name)}</b> <span class="mu">${esc(a.email)}</span></div><span class="mu">${new Date(a.created_at).toLocaleString()}</span></div>${a.warning?`<p class="mu">Warning text: ${esc(a.warning)}</p>`:''}<p>${esc(a.message)}</p><p class="mu">Original decision by ${esc(a.original_admin||'unknown')}</p>${a.own?'<p class="mu">You made the original decision, so a different admin must review this appeal.</p>':`<div class="row"><button class="btn ol s" onclick="adec(${i},'uphold')">Uphold decision</button><button class="btn s" onclick="adec(${i},'overturn')">Overturn decision</button></div>`}</div>`).join('')||'<p class="mu">No open appeals.</p>'}${A.resolved.length?`<details><summary>Recently decided (${A.resolved.length})</summary><div style="overflow-x:auto"><table><tr><th>Date</th><th>Member</th><th>About</th><th>Result</th><th>Note</th></tr>${A.resolved.map(a=>`<tr><td>${new Date(a.resolved_at).toLocaleDateString()}</td><td>${esc(a.email)}</td><td>${kind[a.kind]||esc(a.kind)}</td><td><span class="tag ${a.status=='overturned'?'v':''}">${esc(a.status)}</span></td><td class="mu">${esc(a.note)}</td></tr>`).join('')}</table></div></details>`:''}`}
-function adec(i,decision){const a=D.apl.open[i],n=prompt(decision=='overturn'?`Overturn the decision for ${a.email}? Enter a note (the member will see it):`:`Uphold the decision for ${a.email}? Enter a note (the member will see it):`);if(!n)return;act(async()=>{await api(`/api/admin/appeals/${a.id}/decide`,{decision,note:n});await reloadAdmin()})}
-function backupSec(){const b=D.bkp;if(!b)return '';const fmt=x=>x?new Date(x).toLocaleString():'never';
- return `<h3 style="margin-top:24px">Backups</h3>${!b.enabled?'<div class="lock">Backups are switched off. Set BACKUP_ENABLED=true and BACKUP_KEY in .env, then restart the server.</div>':b.stale?`<div class="lock">No successful backup in the last 36 hours (last: ${fmt(b.lastOk)}). Check the runs below.</div>`:''}
-<p class="mu">${b.enabled?`Runs daily at ${b.at} UTC · keeps the newest ${b.keep} · ${b.copy?'second copy configured':'no second copy configured'} · last success: ${fmt(b.lastOk)}`:'Not running.'}</p>
-<button class="btn ol s" onclick="runBackupNow()" ${b.enabled&&!b.running?'':'disabled'}>Back up now</button>
-<div style="overflow-x:auto;margin-top:10px"><table><tr><th>Started</th><th>How</th><th>Result</th><th>Size</th><th>Audit rows</th><th>Detail</th></tr>${b.runs.map(r=>`<tr><td>${new Date(r.started_at).toLocaleString()}</td><td>${esc(r.trigger)}</td><td><span class="tag ${r.status=='ok'?'v':''}">${esc(r.status)}</span></td><td class="mu">${r.bytes?(r.bytes/1048576).toFixed(2)+' MB':''}</td><td class="mu">${r.audit_rows??''}</td><td class="mu">${esc(r.error||'')}</td></tr>`).join('')||'<tr><td colspan="6" class="mu">No backups yet.</td></tr>'}</table></div><p class="mu">Backups are encrypted files on the server. They are not downloadable from this page; see the README for restoring.</p>`}
-function runBackupNow(){act(async()=>{toast('Backup started…');await api('/api/admin/backups/run',{});toast('Backup finished and verified');D.bkp=await api('/api/admin/backups');render()})}
-const reloadAdmin=()=>go('admin');
-const em=i=>encodeURIComponent(D.ver[i].email);
-function vck(i,k){act(async()=>{await api(`/api/admin/verification/${em(i)}/check`,{check:k,value:D.ver[i][k]?0:1});await reloadAdmin()})}
-function vall(i){act(async()=>{await api(`/api/admin/verification/${em(i)}/approve`,{});await reloadAdmin()})}
-function msus(i){const m=D.mem[i],r=prompt(`Suspend ${m.email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/members/${encodeURIComponent(m.email)}/suspend`,{reason:r});await reloadAdmin()})}
-function mapp(i){const m=D.mem[i];act(async()=>{await api(`/api/admin/members/${encodeURIComponent(m.email)}/approve`,{});await reloadAdmin()})}
-function vrev(i){const r=prompt('Reason for revoking verification:');if(!r)return;act(async()=>{await api(`/api/admin/verification/${em(i)}/revoke`,{reason:r});await reloadAdmin()})}
-function refund(i){const p=D.pay[i],r=prompt(`Refund ${p.amount} ${p.currency} to ${p.email}? Enter a reason:`);if(!r)return;act(async()=>{await api(`/api/admin/payments/${encodeURIComponent(p.id)}/refund`,{reason:r});toast('Refund sent');await reloadAdmin()})}
+   Developer tools (browser console):  I18N.missing()  lists English text that has no translation yet.
+                                       I18N.translate('Log out', 'ur')  tests one phrase.
+   Ask a native reader to check the wording before launch, then edit the entries below.
+   ========================================================================================================== */
+(function () {
+  'use strict';
 
-/* ---- start ---- */
-(async()=>{
- try{cfg=await api('/api/config')}catch(e){}
- try{me=await api('/api/me')}catch(e){me=null}
- setLang(lang);
- api('/api/brokers').then(b=>{D.brokers=b;if(V=='home')render()}).catch(()=>{});
- loadPlans().then(()=>{if(V=='plans'||V=='pay')render()}).catch(()=>{});
- setInterval(async()=>{if(!me||document.hidden)return;try{me=await api('/api/me');nav()}catch(e){}},60000);
- const pid=new URLSearchParams(location.search).get('payment');
- if(pid&&me){history.replaceState(null,'','/');V='payresult';D.pr={status:'pending'};render();pollPay(pid)}
+  /* ---------------------------------------------------------------- 1. dictionary ---------------- */
+  const DICT = {
+    "Why families trust us": ["خاندان ہم پر کیوں بھروسہ کرتے ہیں","لماذا تثق بنا العائلات"],
+    "A respectful place to meet, with your family's peace of mind built in.": ["ملاقات کے لیے ایک باوقار جگہ، جس میں آپ کے خاندان کا اطمینان شامل ہے۔","مكان محترم للتعارف، يمنح عائلتك راحة البال."],
+    "Verified badges": ["تصدیقی نشان","شارات التوثيق"],
+    "Our team checks identity, photo and background before a badge is shown.": ["نشان دکھانے سے پہلے ہماری ٹیم شناخت، تصویر اور پس منظر کی جانچ کرتی ہے۔","يتحقق فريقنا من الهوية والصورة والخلفية قبل ظهور الشارة."],
+    "Private by design": ["بنیادی طور پر نجی","خصوصية بالتصميم"],
+    "Your photo stays hidden unless you choose to show it. Your email is never shown to members.": ["آپ کی تصویر اس وقت تک چھپی رہتی ہے جب تک آپ خود نہ دکھائیں۔ آپ کا ای میل ممبران کو کبھی نہیں دکھایا جاتا۔","تبقى صورتك مخفية ما لم تختر إظهارها، ولا يظهر بريدك الإلكتروني للأعضاء أبدًا."],
+    "Safe conversations": ["محفوظ گفتگو","محادثات آمنة"],
+    "Private chat with block and report tools, and every report is reviewed by our team.": ["بلاک اور رپورٹ کے ٹولز کے ساتھ نجی چیٹ، اور ہر رپورٹ ہماری ٹیم دیکھتی ہے۔","دردشة خاصة مع أدوات الحظر والإبلاغ، ويراجع فريقنا كل بلاغ."],
+    "Secure payment": ["محفوظ ادائیگی","دفع آمن"],
+    "Pay by mada, Visa or Mastercard through Moyasar. We never see your card number.": ["مویاسر کے ذریعے مدا، ویزا یا ماسٹرکارڈ سے ادائیگی کریں۔ ہم آپ کا کارڈ نمبر کبھی نہیں دیکھتے۔","ادفع ببطاقة مدى أو فيزا أو ماستركارد عبر ميسر. لا نرى رقم بطاقتك أبدًا."],
+    "Where good beginnings start": ["جہاں اچھے رشتوں کا آغاز ہوتا ہے","حيث تبدأ البدايات الجميلة"],
+    "Ratings and reviews": ["ریٹنگ اور تبصرے","التقييمات والمراجعات"],
+    "No reviews yet": ["ابھی کوئی تبصرہ نہیں","لا توجد مراجعات بعد"],
+    "Write a review": ["تبصرہ لکھیں","اكتب مراجعة"],
+    "Edit your review": ["اپنا تبصرہ ایڈٹ کریں","عدّل مراجعتك"],
+    "Your review": ["آپ کا تبصرہ","مراجعتك"],
+    "Submit review": ["تبصرہ جمع کرائیں","إرسال المراجعة"],
+    "Update review": ["تبصرہ اپ ڈیٹ کریں","تحديث المراجعة"],
+    "Show more reviews": ["مزید تبصرے دکھائیں","عرض المزيد من المراجعات"],
+    "Report review": ["تبصرے کی رپورٹ کریں","الإبلاغ عن المراجعة"],
+    "Sign in to write a review.": ["تبصرہ لکھنے کے لیے لاگ اِن کریں۔","سجّل الدخول لكتابة مراجعة."],
+    "Be honest and respectful. Please do not include links, phone numbers or personal details.": ["سچ اور احترام کے ساتھ لکھیں۔ براہِ کرم لنک، فون نمبر یا ذاتی تفصیلات نہ لکھیں۔","كن صادقًا ومحترمًا. يرجى عدم إضافة روابط أو أرقام هواتف أو تفاصيل شخصية."],
+    "Share your experience (optional)": ["اپنا تجربہ بتائیں (اختیاری)","شاركنا تجربتك (اختياري)"],
+    "Your rating": ["آپ کی ریٹنگ","تقييمك"],
+    "A moderator has hidden this review. It is not shown to others.": ["ایک منتظم نے یہ تبصرہ چھپا دیا ہے۔ یہ دوسروں کو نظر نہیں آتا۔","أخفى أحد المشرفين هذه المراجعة، ولا تظهر للآخرين."],
+    "Message this broker first. Only members who have been in touch can rate their experience.": ["پہلے اس بروکر کو پیغام بھیجیں۔ صرف رابطے میں رہنے والے ممبران ہی اپنا تجربہ ریٹ کر سکتے ہیں۔","راسل هذا الوسيط أولًا. فقط الأعضاء الذين تواصلوا معه يمكنهم تقييم تجربتهم."],
+    "Create your profile first, then you can review brokers you have been in touch with.": ["پہلے اپنا پروفائل بنائیں، پھر آپ ان بروکرز کا تبصرہ کر سکیں گے جن سے رابطہ رہا ہو۔","أنشئ ملفك أولًا، ثم يمكنك تقييم الوسطاء الذين تواصلت معهم."],
+    "Broker accounts cannot review other brokers.": ["بروکر اکاؤنٹس دوسرے بروکرز کا تبصرہ نہیں کر سکتے۔","لا يمكن لحسابات الوسطاء تقييم وسطاء آخرين."],
+    "You can't review yourself.": ["آپ اپنا تبصرہ خود نہیں کر سکتے۔","لا يمكنك تقييم نفسك."],
+    "You cannot review this broker.": ["آپ اس بروکر کا تبصرہ نہیں کر سکتے۔","لا يمكنك تقييم هذا الوسيط."],
+    "Choose a rating from 1 to 5 stars.": ["1 سے 5 ستاروں میں سے ریٹنگ چنیں۔","اختر تقييمًا من 1 إلى 5 نجوم."],
+    "Please explain in a few words what went wrong (at least 10 characters).": ["براہِ کرم چند لفظوں میں بتائیں کہ کیا غلط ہوا (کم از کم 10 حروف)۔","يرجى شرح ما حدث بكلمات قليلة (10 أحرف على الأقل)."],
+    "Please do not include links, email addresses or phone numbers in a review.": ["براہِ کرم تبصرے میں لنک، ای میل یا فون نمبر نہ لکھیں۔","يرجى عدم كتابة روابط أو عناوين بريد أو أرقام هواتف في المراجعة."],
+    "Thank you for your review": ["آپ کے تبصرے کا شکریہ","شكرًا على مراجعتك"],
+    "Review updated": ["تبصرہ اپ ڈیٹ ہو گیا","تم تحديث المراجعة"],
+    "Review deleted": ["تبصرہ حذف ہو گیا","تم حذف المراجعة"],
+    "Thank you. Our team will look at it.": ["شکریہ۔ ہماری ٹیم اسے دیکھے گی۔","شكرًا. سيراجعها فريقنا."],
+    "Too many review changes. Try again later.": ["تبصروں میں بہت زیادہ تبدیلیاں۔ بعد میں کوشش کریں۔","تغييرات كثيرة جدًا على المراجعات. حاول لاحقًا."],
+    "Edit": ["ایڈٹ","تعديل"],
+    "Delete": ["حذف کریں","حذف"],
+    "Home": ["ہوم","الرئيسية"],
+    "Membership": ["رکنیت","العضوية"],
+    "Search": ["تلاش","بحث"],
+    "Brokers": ["بروکرز","الوسطاء"],
+    "Messages": ["پیغامات","الرسائل"],
+    "My profile": ["میرا پروفائل","ملفي"],
+    "Alerts": ["اطلاعات","التنبيهات"],
+    "Login": ["لاگ اِن","دخول"],
+    "Log out": ["لاگ آؤٹ","خروج"],
+    "Admin": ["ایڈمن","المشرف"],
+    "Broker account": ["بروکر اکاؤنٹ","حساب الوسيط"],
+    "Find your life partner": ["اپنا جیون ساتھی تلاش کریں","ابحث عن شريك حياتك"],
+    "Get started": ["شروع کریں","ابدأ الآن"],
+    "Trusted": ["قابلِ اعتماد","موثوق"],
+    "Safe": ["محفوظ","آمن"],
+    "Genuine": ["مستند","أصيل"],
+    "Verified profiles": ["تصدیق شدہ پروفائلز","ملفات موثّقة"],
+    "Secure payment by Moyasar": ["مویاسر کے ذریعے محفوظ ادائیگی","دفع آمن عبر ميسر"],
+    "Private, moderated chat": ["نجی، نگرانی شدہ گفتگو","محادثة خاصة وتحت الإشراف"],
+    "Block and report tools": ["بلاک اور رپورٹ کے اوزار","أدوات الحظر والإبلاغ"],
+    "How it works": ["یہ کیسے کام کرتا ہے","كيف يعمل"],
+    "1. Sign in": ["۱۔ سائن اِن کریں","١. تسجيل الدخول"],
+    "2. Create your profile": ["۲۔ اپنا پروفائل بنائیں","٢. أنشئ ملفك"],
+    "3. Activate": ["۳۔ فعال کریں","٣. التفعيل"],
+    "4. Connect": ["۴۔ رابطہ کریں","٤. تواصل"],
+    "Continue with your Google account.": ["اپنے گوگل اکاؤنٹ سے جاری رکھیں۔","تابع باستخدام حساب جوجل."],
+    "Tell us about yourself and what you seek.": ["ہمیں اپنے بارے میں اور اپنی پسند کے بارے میں بتائیں۔","أخبرنا عن نفسك وعمّا تبحث عنه."],
+    "Pay securely by card (mada, Visa or Mastercard). Your profile goes live as soon as the payment is confirmed.": ["کارڈ (مدی، ویزا یا ماسٹر کارڈ) سے محفوظ ادائیگی کریں۔ ادائیگی کی تصدیق ہوتے ہی آپ کا پروفائل فعال ہو جاتا ہے۔","ادفع بأمان بالبطاقة (مدى أو فيزا أو ماستركارد). يصبح ملفك فعّالاً فور تأكيد الدفع."],
+    "Browse verified members or work with a broker.": ["تصدیق شدہ ممبران دیکھیں یا کسی بروکر کے ساتھ کام کریں۔","تصفّح الأعضاء الموثّقين أو اعمل مع وسيط."],
+    "Verified profiles, trusted brokers and private chat for families across the globe.": ["تصدیق شدہ پروفائلز، قابلِ اعتماد بروکرز اور دنیا بھر کے خاندانوں کے لیے نجی گفتگو۔","ملفات موثّقة ووسطاء موثوقون ومحادثة خاصة للعائلات حول العالم."],
+    "Trusted brokers": ["قابلِ اعتماد بروکرز","وسطاء موثوقون"],
+    "See all": ["سب دیکھیں","عرض الكل"],
+    "View profile": ["پروفائل دیکھیں","عرض الملف"],
+    "Verified": ["تصدیق شدہ","موثّق"],
+    "Unverified": ["غیر تصدیق شدہ","غير موثّق"],
+    "Welcome": ["خوش آمدید","مرحباً"],
+    "Sign in to create your profile.": ["پروفائل بنانے کے لیے سائن اِن کریں۔","سجّل الدخول لإنشاء ملفك."],
+    "Continue with Apple": ["ایپل کے ساتھ جاری رکھیں","المتابعة باستخدام Apple"],
+    "Apple sign-in is not configured": ["ایپل سائن اِن دستیاب نہیں","تسجيل الدخول عبر Apple غير متاح"],
+    "By continuing you agree to:": ["جاری رکھنے سے آپ اتفاق کرتے ہیں:","بالمتابعة فإنك توافق على:"],
+    "Terms": ["شرائط","الشروط"],
+    "Privacy Policy": ["پرائیویسی پالیسی","سياسة الخصوصية"],
+    "Privacy": ["پرائیویسی","الخصوصية"],
+    "Safety tips": ["حفاظتی مشورے","نصائح السلامة"],
+    "Contact": ["رابطہ","اتصل بنا"],
+    "© Rishta Connect Global · Real connections last forever": ["© رشتہ کنیکٹ گلوبل · حقیقی رشتے ہمیشہ قائم رہتے ہیں","© ريشتا كونكت جلوبال · العلاقات الحقيقية تدوم للأبد"],
+    "Anyone can create a profile for free. A membership activates it so you appear in search and can browse and message members. Pay once per period; nothing renews by itself.": ["پروفائل بنانا مفت ہے۔ رکنیت اسے فعال کرتی ہے تاکہ آپ تلاش میں نظر آئیں اور ممبران کو دیکھ اور پیغام بھیج سکیں۔ ہر مدت کے لیے ایک بار ادائیگی کریں؛ کچھ خود بخود تجدید نہیں ہوتا۔","يمكن لأي شخص إنشاء ملف مجاناً. تفعّل العضوية ملفك لتظهر في البحث وتتصفح الأعضاء وتراسلهم. تدفع مرة واحدة لكل فترة ولا يتجدد شيء تلقائياً."],
+    "Loading plans…": ["منصوبے لوڈ ہو رہے ہیں…","جارٍ تحميل الباقات…"],
+    "View all profiles": ["تمام پروفائلز دیکھیں","عرض جميع الملفات"],
+    "Unlimited messages": ["لامحدود پیغامات","رسائل غير محدودة"],
+    "Profile highlights": ["نمایاں پروفائل","إبراز الملف"],
+    "View trusted profiles": ["قابلِ اعتماد پروفائلز دیکھیں","عرض الملفات الموثوقة"],
+    "Send limited messages": ["محدود پیغامات بھیجیں","إرسال رسائل محدودة"],
+    "Basic search": ["بنیادی تلاش","بحث أساسي"],
+    "All Premium features": ["پریمیم کی تمام خصوصیات","جميع مزايا بريميوم"],
+    "Priority broker support": ["بروکر کی ترجیحی معاونت","دعم الوسيط ذو الأولوية"],
+    "Verified badge boost": ["تصدیقی نشان میں اضافہ","تعزيز شارة التوثيق"],
+    "Basic Plan": ["بنیادی پلان","الباقة الأساسية"],
+    "Premium Plan": ["پریمیم پلان","باقة بريميوم"],
+    "Premium Plus": ["پریمیم پلس","بريميوم بلس"],
+    "Activate your profile": ["اپنا پروفائل فعال کریں","فعّل ملفك"],
+    "Complete payment to activate": ["فعال کرنے کے لیے ادائیگی مکمل کریں","أكمل الدفع للتفعيل"],
+    "Your card details go straight to Moyasar and never reach our servers. Your profile activates automatically once the payment is confirmed.": ["آپ کے کارڈ کی تفصیلات براہِ راست مویاسر کو جاتی ہیں اور ہمارے سرور تک کبھی نہیں پہنچتیں۔ ادائیگی کی تصدیق پر آپ کا پروفائل خود بخود فعال ہو جاتا ہے۔","تذهب بيانات بطاقتك مباشرة إلى ميسر ولا تصل إلى خوادمنا أبداً. يتفعّل ملفك تلقائياً فور تأكيد الدفع."],
+    "Payment confirmed": ["ادائیگی کی تصدیق ہو گئی","تم تأكيد الدفع"],
+    "Payment not completed": ["ادائیگی مکمل نہیں ہوئی","لم يكتمل الدفع"],
+    "Confirming your payment…": ["آپ کی ادائیگی کی تصدیق ہو رہی ہے…","جارٍ تأكيد دفعتك…"],
+    "Your profile is now active.": ["آپ کا پروفائل اب فعال ہے۔","ملفك فعّال الآن."],
+    "No money was taken. You can try again.": ["کوئی رقم نہیں کٹی۔ آپ دوبارہ کوشش کر سکتے ہیں۔","لم يُسحب أي مبلغ. يمكنك المحاولة مرة أخرى."],
+    "This usually takes a few seconds. Keep this page open.": ["عموماً چند سیکنڈ لگتے ہیں۔ یہ صفحہ کھلا رکھیں۔","يستغرق ذلك عادةً بضع ثوانٍ. أبقِ هذه الصفحة مفتوحة."],
+    "Browse members": ["ممبران دیکھیں","تصفّح الأعضاء"],
+    "Try again": ["دوبارہ کوشش کریں","حاول مرة أخرى"],
+    "Renew or extend": ["تجدید یا توسیع کریں","جدّد أو مدّد"],
+    "Close": ["بند کریں","إغلاق"],
+    "Create your profile": ["اپنا پروفائل بنائیں","أنشئ ملفك"],
+    "Edit your profile": ["اپنا پروفائل ایڈٹ کریں","عدّل ملفك"],
+    "Full name": ["پورا نام","الاسم الكامل"],
+    "Gender": ["جنس","الجنس"],
+    "Female": ["خاتون","أنثى"],
+    "Male": ["مرد","ذكر"],
+    "Age": ["عمر","العمر"],
+    "City, country": ["شہر، ملک","المدينة، الدولة"],
+    "Marital status": ["ازدواجی حیثیت","الحالة الاجتماعية"],
+    "Never married": ["غیر شادی شدہ","لم يسبق له الزواج"],
+    "Divorced": ["طلاق یافتہ","مطلّق"],
+    "Widowed": ["بیوہ/رنڈوا","أرمل"],
+    "Education": ["تعلیم","التعليم"],
+    "Occupation": ["پیشہ","المهنة"],
+    "About you": ["آپ کے بارے میں","نبذة عنك"],
+    "Looking for": ["تلاش ہے","أبحث عن"],
+    "I am 18 or older and I agree to:": ["میری عمر 18 سال یا زیادہ ہے اور میں اتفاق کرتا/کرتی ہوں:","عمري 18 عاماً أو أكثر وأوافق على:"],
+    "Terms & Conditions": ["شرائط و ضوابط","الشروط والأحكام"],
+    "Save and continue to payment": ["محفوظ کریں اور ادائیگی پر جائیں","احفظ وتابع إلى الدفع"],
+    "Save changes": ["تبدیلیاں محفوظ کریں","حفظ التغييرات"],
+    "Cancel": ["منسوخ کریں","إلغاء"],
+    "Edit profile": ["پروفائل ایڈٹ کریں","تعديل الملف"],
+    "Active": ["فعال","فعّال"],
+    "Pending payment": ["ادائیگی باقی","بانتظار الدفع"],
+    "Settings and photo": ["ترتیبات اور تصویر","الإعدادات والصورة"],
+    "Profile saved": ["پروفائل محفوظ ہو گیا","تم حفظ الملف"],
+    "Search profiles": ["پروفائلز تلاش کریں","بحث عن الملفات"],
+    "Any gender": ["کوئی بھی جنس","أي جنس"],
+    "Any marital status": ["کوئی بھی ازدواجی حیثیت","أي حالة اجتماعية"],
+    "City": ["شہر","المدينة"],
+    "Min age": ["کم از کم عمر","الحد الأدنى للعمر"],
+    "Max age": ["زیادہ سے زیادہ عمر","الحد الأقصى للعمر"],
+    "Apply filters": ["فلٹر لگائیں","تطبيق التصفية"],
+    "Clear": ["صاف کریں","مسح"],
+    "Previous": ["پچھلا","السابق"],
+    "Next": ["اگلا","التالي"],
+    "View": ["دیکھیں","عرض"],
+    "Report": ["رپورٹ کریں","إبلاغ"],
+    "Send message": ["پیغام بھیجیں","إرسال رسالة"],
+    "Save": ["محفوظ کریں","حفظ"],
+    "No members match yet. Widen your filters or check back soon.": ["ابھی کوئی ممبر مطابقت نہیں رکھتا۔ فلٹر وسیع کریں یا بعد میں دیکھیں۔","لا يوجد أعضاء مطابقون بعد. وسّع التصفية أو عُد قريباً."],
+    "My shortlist": ["میری منتخب فہرست","قائمتي المفضلة"],
+    "Back to search": ["تلاش پر واپس","العودة للبحث"],
+    "Back": ["واپس","رجوع"],
+    "Nobody saved yet. Use \"Save\" on a profile to keep it here.": ["ابھی کوئی محفوظ نہیں۔ پروفائل پر \"محفوظ کریں\" دبا کر یہاں رکھیں۔","لم تحفظ أحداً بعد. استخدم \"حفظ\" في الملف ليظهر هنا."],
+    "Marital status:": ["ازدواجی حیثیت:","الحالة الاجتماعية:"],
+    "Education:": ["تعلیم:","التعليم:"],
+    "Occupation:": ["پیشہ:","المهنة:"],
+    "Safety tip: keep conversations on the site and never send money.": ["حفاظتی مشورہ: گفتگو اسی سائٹ پر رکھیں اور کبھی رقم نہ بھیجیں۔","نصيحة أمان: أبقِ المحادثات داخل الموقع ولا ترسل المال أبداً."],
+    "Read more": ["مزید پڑھیں","اقرأ المزيد"],
+    "Verified brokers": ["تصدیق شدہ بروکرز","وسطاء موثّقون"],
+    "Become a broker": ["بروکر بنیں","كن وسيطاً"],
+    "Matrimonial brokers approved by our team who manage introductions on your behalf.": ["ہماری ٹیم سے منظور شدہ رشتہ کروانے والے بروکرز جو آپ کی طرف سے تعارف کراتے ہیں۔","وسطاء زواج معتمدون من فريقنا يتولّون التعارف نيابةً عنك."],
+    "No brokers have been approved yet.": ["ابھی کسی بروکر کی منظوری نہیں ہوئی۔","لم تتم الموافقة على أي وسيط بعد."],
+    "Contact broker": ["بروکر سے رابطہ کریں","تواصل مع الوسيط"],
+    "Matrimonial broker": ["رشتہ بروکر","وسيط زواج"],
+    "Location:": ["مقام:","الموقع:"],
+    "Experience:": ["تجربہ:","الخبرة:"],
+    "Languages:": ["زبانیں:","اللغات:"],
+    "Specialization:": ["مہارت:","التخصص:"],
+    "No conversations yet. Message a member or contact a broker.": ["ابھی کوئی گفتگو نہیں۔ کسی ممبر کو پیغام بھیجیں یا بروکر سے رابطہ کریں۔","لا توجد محادثات بعد. راسل عضواً أو تواصل مع وسيط."],
+    "Blocked members": ["بلاک کیے گئے ممبران","الأعضاء المحظورون"],
+    "Unblock": ["بلاک ختم کریں","إلغاء الحظر"],
+    "Block": ["بلاک کریں","حظر"],
+    "Type a message…": ["پیغام لکھیں…","اكتب رسالة…"],
+    "Send": ["بھیجیں","إرسال"],
+    "Say Assalamu Alaikum to start.": ["السلام علیکم سے آغاز کریں۔","ابدأ بقول السلام عليكم."],
+    "Never send money or bank details to someone you have not met in person with your family.": ["جس سے آپ اپنے خاندان کے ساتھ ذاتی طور پر نہیں ملے، اسے کبھی رقم یا بینک کی تفصیلات نہ بھیجیں۔","لا ترسل المال أو بيانات البنك لمن لم تلتقِ به شخصياً مع عائلتك."],
+    "What happened?": ["کیا ہوا؟","ماذا حدث؟"],
+    "Harassment or abuse": ["ہراسانی یا بدسلوکی","مضايقة أو إساءة"],
+    "Scam or asking for money": ["فراڈ یا رقم کا مطالبہ","احتيال أو طلب مال"],
+    "Fake or misleading profile": ["جعلی یا گمراہ کن پروفائل","ملف مزيّف أو مضلِّل"],
+    "Inappropriate content": ["نامناسب مواد","محتوى غير لائق"],
+    "Something else": ["کچھ اور","شيء آخر"],
+    "Details (optional)": ["تفصیل (اختیاری)","التفاصيل (اختياري)"],
+    "Also block this member": ["اس ممبر کو بلاک بھی کریں","احظر هذا العضو أيضاً"],
+    "Send report": ["رپورٹ بھیجیں","إرسال البلاغ"],
+    "Report sent. Thank you.": ["رپورٹ بھیج دی گئی۔ شکریہ۔","تم إرسال البلاغ. شكراً لك."],
+    "Member blocked": ["ممبر بلاک ہو گیا","تم حظر العضو"],
+    "Notifications": ["اطلاعات","الإشعارات"],
+    "No notifications yet.": ["ابھی کوئی اطلاع نہیں۔","لا توجد إشعارات بعد."],
+    "Warnings on your account": ["آپ کے اکاؤنٹ پر انتباہات","تحذيرات على حسابك"],
+    "I understand": ["میں سمجھ گیا/گئی","فهمت"],
+    "Appeal": ["اپیل","استئناف"],
+    "Appeal this decision": ["اس فیصلے کی اپیل کریں","استأنف هذا القرار"],
+    "Appeal this warning": ["اس انتباہ کی اپیل کریں","استأنف هذا التحذير"],
+    "Appeal sent": ["اپیل بھیج دی گئی","تم إرسال الاستئناف"],
+    "Send appeal": ["اپیل بھیجیں","إرسال الاستئناف"],
+    "Your appeals": ["آپ کی اپیلیں","استئنافاتك"],
+    "New": ["نیا","جديد"],
+    "Why should this decision be reviewed?": ["اس فیصلے پر نظرِ ثانی کیوں ہونی چاہیے؟","لماذا ينبغي مراجعة هذا القرار؟"],
+    "Under review": ["زیرِ جائزہ","قيد المراجعة"],
+    "Settings": ["ترتیبات","الإعدادات"],
+    "Account": ["اکاؤنٹ","الحساب"],
+    "Profile photo": ["پروفائل کی تصویر","صورة الملف"],
+    "Language": ["زبان","اللغة"],
+    "Your data": ["آپ کا ڈیٹا","بياناتك"],
+    "Hidden. Only you can see it.": ["پوشیدہ۔ صرف آپ اسے دیکھ سکتے ہیں۔","مخفية. أنت وحدك ترونها."],
+    "Shown to active members.": ["فعال ممبران کو دکھائی جاتی ہے۔","تظهر للأعضاء النشطين."],
+    "Show my photo to members": ["میری تصویر ممبران کو دکھائیں","أظهر صورتي للأعضاء"],
+    "No photo yet. Your photo stays hidden until you choose to show it.": ["ابھی کوئی تصویر نہیں۔ جب تک آپ نہ چاہیں، آپ کی تصویر پوشیدہ رہتی ہے۔","لا توجد صورة بعد. تبقى صورتك مخفية حتى تختار إظهارها."],
+    "Upload photo": ["تصویر اپ لوڈ کریں","رفع صورة"],
+    "Replace photo": ["تصویر تبدیل کریں","استبدال الصورة"],
+    "Remove photo": ["تصویر ہٹائیں","إزالة الصورة"],
+    "Photo saved. It stays hidden until you choose to show it to members.": ["تصویر محفوظ ہو گئی۔ جب تک آپ ممبران کو دکھانا نہ چاہیں، یہ پوشیدہ رہے گی۔","تم حفظ الصورة. تبقى مخفية حتى تختار إظهارها للأعضاء."],
+    "Use a clear photo of yourself. A new photo is checked by our team before it counts toward your Photo verification.": ["اپنی واضح تصویر استعمال کریں۔ نئی تصویر فوٹو تصدیق میں شمار ہونے سے پہلے ہماری ٹیم جانچتی ہے۔","استخدم صورة واضحة لك. يراجع فريقنا الصورة الجديدة قبل احتسابها في توثيق الصورة."],
+    "Download a copy of everything we hold about you.": ["ہمارے پاس آپ کے بارے میں جو کچھ ہے اس کی کاپی ڈاؤن لوڈ کریں۔","نزّل نسخة من كل ما نحتفظ به عنك."],
+    "Download my data": ["میرا ڈیٹا ڈاؤن لوڈ کریں","تنزيل بياناتي"],
+    "Delete my account": ["میرا اکاؤنٹ حذف کریں","حذف حسابي"],
+    "Type DELETE to confirm": ["تصدیق کے لیے DELETE لکھیں","اكتب DELETE للتأكيد"],
+    "Your account has been deleted.": ["آپ کا اکاؤنٹ حذف کر دیا گیا ہے۔","تم حذف حسابك."],
+    "This cannot be undone.": ["اسے واپس نہیں کیا جا سکتا۔","لا يمكن التراجع عن ذلك."],
+    "Create your profile first.": ["پہلے اپنا پروفائل بنائیں۔","أنشئ ملفك أولاً."],
+    "1 Sign in": ["1 لاگ اِن","1 تسجيل الدخول"],
+    "2 Profile": ["2 پروفائل","2 الملف"],
+    "3 Payment": ["3 ادائیگی","3 الدفع"],
+    "A backup is already running": ["بیک اپ پہلے ہی چل رہا ہے","هناك نسخة احتياطية قيد التشغيل بالفعل"],
+    "A different admin must decide this appeal.": ["اس اپیل کا فیصلہ کوئی دوسرا ایڈمن کرے گا۔","يجب أن يبت مسؤول آخر في هذا الاعتراض."],
+    "A different reviewer will look at it. You will get a notification with the decision.": ["کوئی دوسرا جائزہ لینے والا اسے دیکھے گا۔ فیصلے کی اطلاع آپ کو ملے گی۔","سيراجعه مراجع آخر وسيصلك إشعار بالقرار."],
+    "A different reviewer will read this. You will get a notification with the decision. You can appeal the same decision again only after 30 days.": ["کوئی دوسرا جائزہ لینے والا اسے پڑھے گا۔ فیصلے کی اطلاع آپ کو ملے گی۔ آپ اسی فیصلے کی دوبارہ اپیل صرف 30 دن بعد کر سکتے ہیں۔","سيقرأ هذا مراجع آخر وسيصلك إشعار بالقرار. يمكنك الاعتراض على القرار نفسه مرة أخرى بعد 30 يومًا فقط."],
+    "A happy couple": ["ایک خوش جوڑا","زوجان سعيدان"],
+    "A bride and groom standing together under a crescent moon and a heart": ["دلہا اور دلہن ہلال اور دل کے نیچے ساتھ کھڑے ہیں","عروسان يقفان معًا تحت هلال وقلب"],
+    "A moderator hid your broker review because it did not follow our review rules. You can edit it and it will stay hidden until a moderator restores it.": ["ایک موڈریٹر نے آپ کا بروکر تبصرہ چھپا دیا کیونکہ وہ ہمارے اصولوں کے مطابق نہیں تھا۔ آپ اسے ایڈٹ کر سکتے ہیں، لیکن موڈریٹر بحال کرنے تک وہ چھپا رہے گا۔","أخفى أحد المشرفين مراجعتك للوسيط لأنها لا تتوافق مع قواعدنا. يمكنك تعديلها وستبقى مخفية حتى يعيدها مشرف."],
+    "A payment is still being confirmed. Try again in a few minutes.": ["ایک ادائیگی کی تصدیق ہو رہی ہے۔ چند منٹ بعد دوبارہ کوشش کریں۔","لا يزال هناك دفع قيد التأكيد. حاول مرة أخرى بعد دقائق."],
+    "About": ["تعارف","نبذة"],
+    "Action": ["کارروائی","الإجراء"],
+    "Activate your profile with a membership to search members.": ["ممبران تلاش کرنے کے لیے ممبرشپ سے اپنا پروفائل فعال کریں۔","فعّل ملفك بعضوية للبحث عن الأعضاء."],
+    "Activate your profile with a membership to view members.": ["ممبران دیکھنے کے لیے ممبرشپ سے اپنا پروفائل فعال کریں۔","فعّل ملفك بعضوية لعرض الأعضاء."],
+    "Admin access only": ["صرف ایڈمن کے لیے","للمسؤولين فقط"],
+    "Admin only": ["صرف ایڈمن","للمسؤول فقط"],
+    "Admin accounts can't be suspended": ["ایڈمن اکاؤنٹ معطل نہیں کیے جا سکتے","لا يمكن إيقاف حسابات المسؤولين"],
+    "Admin accounts can't be warned or suspended": ["ایڈمن اکاؤنٹ کو تنبیہ یا معطل نہیں کیا جا سکتا","لا يمكن تحذير حسابات المسؤولين أو إيقافها"],
+    "Admin panel": ["ایڈمن پینل","لوحة الإدارة"],
+    "All actions": ["تمام کارروائیاں","كل الإجراءات"],
+    "Amount": ["رقم","المبلغ"],
+    "An administrator will review the last 20 messages of this conversation.": ["ایک ایڈمن اس گفتگو کے آخری 20 پیغامات دیکھے گا۔","سيراجع مسؤول آخر 20 رسالة من هذه المحادثة."],
+    "Appeal not found": ["اپیل نہیں ملی","لم يتم العثور على الاعتراض"],
+    "Appeals to review": ["جائزے کے لیے اپیلیں","اعتراضات للمراجعة"],
+    "Apple did not share a verified email. In your Apple ID settings, stop using Sign in with Apple for this site, then try again.": ["ایپل نے تصدیق شدہ ای میل شیئر نہیں کی۔ اپنی Apple ID کی سیٹنگز میں اس سائٹ کے لیے Apple سے لاگ اِن بند کریں، پھر دوبارہ کوشش کریں۔","لم تشارك Apple بريدًا إلكترونيًا موثقًا. في إعدادات Apple ID أوقف استخدام «تسجيل الدخول عبر Apple» لهذا الموقع ثم حاول مجددًا."],
+    "Apple sign-in did not complete. Please try again.": ["Apple سے لاگ اِن مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔","لم يكتمل تسجيل الدخول عبر Apple. حاول مرة أخرى."],
+    "Apple sign-in failed": ["Apple سے لاگ اِن ناکام","فشل تسجيل الدخول عبر Apple"],
+    "Apple sign-in failed. The site owner can see the reason in the server log.": ["Apple سے لاگ اِن ناکام ہوا۔ سائٹ کا مالک وجہ سرور لاگ میں دیکھ سکتا ہے۔","فشل تسجيل الدخول عبر Apple. يمكن لمالك الموقع رؤية السبب في سجل الخادم."],
+    "Apple sign-in is still loading. Try again in a moment.": ["Apple لاگ اِن ابھی لوڈ ہو رہا ہے۔ کچھ دیر بعد کوشش کریں۔","تسجيل الدخول عبر Apple قيد التحميل. حاول بعد لحظة."],
+    "Application submitted": ["درخواست جمع ہو گئی","تم إرسال الطلب"],
+    "Apply again": ["دوبارہ درخواست دیں","قدّم طلبًا مرة أخرى"],
+    "Approve all": ["سب منظور کریں","الموافقة على الكل"],
+    "Audit log": ["آڈٹ لاگ","سجل التدقيق"],
+    "Audit rows": ["آڈٹ اندراجات","سجلات التدقيق"],
+    "Back up now": ["ابھی بیک اپ لیں","انسخ احتياطيًا الآن"],
+    "Backup failed:": ["بیک اپ ناکام:","فشل النسخ الاحتياطي:"],
+    "Backup finished and verified": ["بیک اپ مکمل اور تصدیق شدہ","اكتمل النسخ الاحتياطي وتم التحقق منه"],
+    "Backup started…": ["بیک اپ شروع ہو گیا…","بدأ النسخ الاحتياطي…"],
+    "Backups": ["بیک اپ","النسخ الاحتياطية"],
+    "Backups are not enabled. Set BACKUP_ENABLED=true and BACKUP_KEY in .env, then restart.": ["بیک اپ فعال نہیں ہیں۔ .env میں BACKUP_ENABLED=true اور BACKUP_KEY لگائیں، پھر دوبارہ شروع کریں۔","النسخ الاحتياطي غير مفعّل. اضبط BACKUP_ENABLED=true و BACKUP_KEY في ملف .env ثم أعد التشغيل."],
+    "Bad request": ["غلط درخواست","طلب غير صالح"],
+    "Broker": ["بروکر","وسيط"],
+    "Broker applications": ["بروکر درخواستیں","طلبات الوسطاء"],
+    "Broker not found": ["بروکر نہیں ملا","لم يتم العثور على الوسيط"],
+    "Broker reviews": ["بروکر تبصرے","مراجعات الوسطاء"],
+    "Brokers are reviewed by our team before they are listed or shown as Verified.": ["بروکرز کو فہرست میں شامل کرنے یا تصدیق شدہ دکھانے سے پہلے ہماری ٹیم جانچتی ہے۔","تراجع فريقنا الوسطاء قبل إدراجهم أو إظهارهم كموثقين."],
+    "Choose": ["منتخب کریں","اختر"],
+    "Choose a plan": ["پلان منتخب کریں","اختر خطة"],
+    "Choose dismiss, warn or suspend": ["خارج کریں، تنبیہ کریں یا معطل کریں میں سے انتخاب کریں","اختر: رفض أو تحذير أو إيقاف"],
+    "Choose overturn or uphold": ["الٹ دیں یا برقرار رکھیں میں سے انتخاب کریں","اختر: إلغاء القرار أو تأييده"],
+    "Choose what happened": ["منتخب کریں کیا ہوا","اختر ما حدث"],
+    "Complete every field.": ["ہر خانہ مکمل کریں۔","أكمل كل الحقول."],
+    "Complete every field. Age must be 18 to 70.": ["ہر خانہ مکمل کریں۔ عمر 18 سے 70 کے درمیان ہونی چاہیے۔","أكمل كل الحقول. يجب أن يكون العمر بين 18 و70."],
+    "Connect": ["جوڑیں","اتصال"],
+    "Continue": ["جاری رکھیں","متابعة"],
+    "Conversation not found": ["گفتگو نہیں ملی","لم يتم العثور على المحادثة"],
+    "Conversation snapshot": ["گفتگو کا عکس","لقطة من المحادثة"],
+    "Could not load the secure payment form. Check your connection and try again.": ["محفوظ ادائیگی فارم لوڈ نہیں ہو سکا۔ کنکشن چیک کر کے دوبارہ کوشش کریں۔","تعذر تحميل نموذج الدفع الآمن. تحقق من اتصالك وحاول مجددًا."],
+    "Could not prepare your data. Try again.": ["آپ کا ڈیٹا تیار نہیں ہو سکا۔ دوبارہ کوشش کریں۔","تعذر تجهيز بياناتك. حاول مرة أخرى."],
+    "Create your profile before paying": ["ادائیگی سے پہلے اپنا پروفائل بنائیں","أنشئ ملفك قبل الدفع"],
+    "Date": ["تاریخ","التاريخ"],
+    "Delete your account for good? This cannot be undone.": ["اپنا اکاؤنٹ ہمیشہ کے لیے حذف کریں؟ اسے واپس نہیں کیا جا سکتا۔","حذف حسابك نهائيًا؟ لا يمكن التراجع عن ذلك."],
+    "Delete your review?": ["اپنا تبصرہ حذف کریں؟","حذف مراجعتك؟"],
+    "Detail": ["تفصیل","التفصيل"],
+    "Details": ["تفصیلات","التفاصيل"],
+    "Dismiss": ["خارج کریں","رفض"],
+    "Email not verified": ["ای میل کی تصدیق نہیں ہوئی","البريد الإلكتروني غير موثق"],
+    "Enter a note for the record": ["ریکارڈ کے لیے نوٹ لکھیں","اكتب ملاحظة للسجل"],
+    "Enter a note. The member will see it.": ["نوٹ لکھیں۔ ممبر اسے دیکھے گا۔","اكتب ملاحظة. سيراها العضو."],
+    "Enter a reason": ["وجہ لکھیں","اكتب السبب"],
+    "Enter a reason.": ["وجہ لکھیں۔","اكتب السبب."],
+    "Enter a reason for revoking": ["منسوخ کرنے کی وجہ لکھیں","اكتب سبب السحب"],
+    "Enter a reason for suspending": ["معطل کرنے کی وجہ لکھیں","اكتب سبب الإيقاف"],
+    "Enter a refund reason": ["رقم واپسی کی وجہ لکھیں","اكتب سبب الاسترداد"],
+    "Experience (for example 5 years)": ["تجربہ (مثلاً 5 سال)","الخبرة (مثلاً 5 سنوات)"],
+    "Export CSV": ["CSV ایکسپورٹ کریں","تصدير CSV"],
+    "Exported the newest 50,000 entries. Narrow the filters to get the rest.": ["تازہ ترین 50,000 اندراجات ایکسپورٹ ہوئے۔ باقی کے لیے فلٹر محدود کریں۔","تم تصدير أحدث 50,000 سجل. ضيّق المرشحات للحصول على الباقي."],
+    "Filter": ["فلٹر","تصفية"],
+    "Global": ["عالمی","عالمي"],
+    "Google sign-in could not load. Check your connection.": ["Google لاگ اِن لوڈ نہیں ہو سکا۔ کنکشن چیک کریں۔","تعذر تحميل تسجيل الدخول عبر Google. تحقق من اتصالك."],
+    "Google sign-in failed. The site owner can see the reason in the server log.": ["Google سے لاگ اِن ناکام ہوا۔ سائٹ کا مالک وجہ سرور لاگ میں دیکھ سکتا ہے۔","فشل تسجيل الدخول عبر Google. يمكن لمالك الموقع رؤية السبب في سجل الخادم."],
+    "Hide this review? Enter a reason:": ["یہ تبصرہ چھپائیں؟ وجہ لکھیں:","إخفاء هذه المراجعة؟ اكتب السبب:"],
+    "How": ["کیسے","كيف"],
+    "Languages": ["زبانیں","اللغات"],
+    "Looking for:": ["تلاش:","يبحث عن:"],
+    "Main": ["مرکزی","الرئيسية"],
+    "Member": ["ممبر","عضو"],
+    "Member not found": ["ممبر نہیں ملا","لم يتم العثور على العضو"],
+    "Members": ["ممبران","الأعضاء"],
+    "Member photo": ["ممبر کی تصویر","صورة العضو"],
+    "New appeal to review": ["جائزے کے لیے نئی اپیل","اعتراض جديد للمراجعة"],
+    "No applications yet.": ["ابھی کوئی درخواست نہیں۔","لا توجد طلبات بعد."],
+    "No conversation attached.": ["کوئی گفتگو منسلک نہیں۔","لا توجد محادثة مرفقة."],
+    "No members yet.": ["ابھی کوئی ممبر نہیں۔","لا يوجد أعضاء بعد."],
+    "No open appeals.": ["کوئی کھلی اپیل نہیں۔","لا توجد اعتراضات مفتوحة."],
+    "No open reports.": ["کوئی کھلی رپورٹ نہیں۔","لا توجد بلاغات مفتوحة."],
+    "No photo": ["تصویر نہیں","لا توجد صورة"],
+    "No reviews yet.": ["ابھی کوئی تبصرہ نہیں۔","لا توجد مراجعات بعد."],
+    "No transactions yet.": ["ابھی کوئی لین دین نہیں۔","لا توجد معاملات بعد."],
+    "No verified members yet.": ["ابھی کوئی تصدیق شدہ ممبر نہیں۔","لا يوجد أعضاء موثقون بعد."],
+    "Not found": ["نہیں ملا","غير موجود"],
+    "Note": ["نوٹ","ملاحظة"],
+    "Only approved brokers can be suspended": ["صرف منظور شدہ بروکرز کو معطل کیا جا سکتا ہے","لا يمكن إيقاف إلا الوسطاء المعتمدين"],
+    "Only paid payments can be refunded": ["صرف ادا شدہ ادائیگیاں واپس کی جا سکتی ہیں","لا يمكن استرداد إلا المدفوعات المكتملة"],
+    "Open the Broker account tab to see the reason and apply again.": ["وجہ دیکھنے اور دوبارہ درخواست دینے کے لیے بروکر اکاؤنٹ ٹیب کھولیں۔","افتح تبويب حساب الوسيط لرؤية السبب وإعادة التقديم."],
+    "Original decision by": ["اصل فیصلہ از","القرار الأصلي من"],
+    "Outcome": ["نتیجہ","النتيجة"],
+    "Pay": ["ادا کریں","ادفع"],
+    "Pay by mada, Visa or Mastercard through Moyasar. We never see your card number. See the": ["مدا، ویزا یا ماسٹر کارڈ سے Moyasar کے ذریعے ادا کریں۔ ہم آپ کا کارڈ نمبر کبھی نہیں دیکھتے۔ دیکھیں","ادفع بمدى أو فيزا أو ماستركارد عبر Moyasar. لا نرى رقم بطاقتك أبدًا. راجع"],
+    "Payment records are kept without your email, as the law requires. This cannot be undone.": ["قانون کے مطابق ادائیگی کا ریکارڈ آپ کی ای میل کے بغیر محفوظ رہتا ہے۔ اسے واپس نہیں کیا جا سکتا۔","تُحفظ سجلات الدفع دون بريدك الإلكتروني كما يقتضي القانون. لا يمكن التراجع عن ذلك."],
+    "Payments and transactions": ["ادائیگیاں اور لین دین","المدفوعات والمعاملات"],
+    "Photo of": ["تصویر:","صورة"],
+    "Plan": ["پلان","الخطة"],
+    "Please accept the Terms and the Privacy Policy to continue.": ["جاری رکھنے کے لیے شرائط اور پرائیویسی پالیسی قبول کریں۔","يرجى قبول الشروط وسياسة الخصوصية للمتابعة."],
+    "Please choose a JPEG photo (at least 64 pixels wide).": ["JPEG تصویر منتخب کریں (کم از کم 64 پکسل چوڑی)۔","اختر صورة JPEG (عرضها 64 بكسل على الأقل)."],
+    "Please explain in at least 20 characters why this decision should be reviewed.": ["کم از کم 20 حروف میں بتائیں کہ اس فیصلے پر نظرِ ثانی کیوں ہونی چاہیے۔","اشرح في 20 حرفًا على الأقل سبب وجوب مراجعة هذا القرار."],
+    "Reason": ["وجہ","السبب"],
+    "Reason for revoking verification:": ["تصدیق منسوخ کرنے کی وجہ:","سبب سحب التوثيق:"],
+    "Recently decided": ["حال ہی میں فیصلہ شدہ","تم البت فيها مؤخرًا"],
+    "Recently resolved": ["حال ہی میں حل شدہ","تمت معالجتها مؤخرًا"],
+    "Recipient not found": ["وصول کنندہ نہیں ملا","لم يتم العثور على المستلم"],
+    "Refund failed:": ["رقم واپسی ناکام:","فشل الاسترداد:"],
+    "Refund sent": ["رقم واپس بھیج دی گئی","تم إرسال المبلغ المسترد"],
+    "Reinstate": ["بحال کریں","إعادة التفعيل"],
+    "Remove from shortlist": ["شارٹ لسٹ سے ہٹائیں","إزالة من القائمة المختصرة"],
+    "Remove your photo?": ["اپنی تصویر ہٹائیں؟","إزالة صورتك؟"],
+    "Removed from shortlist": ["شارٹ لسٹ سے ہٹا دیا گیا","تمت الإزالة من القائمة المختصرة"],
+    "Report not found": ["رپورٹ نہیں ملی","لم يتم العثور على البلاغ"],
+    "Reported by": ["رپورٹ کنندہ","المُبلِّغ"],
+    "Reports to review": ["جائزے کے لیے رپورٹس","بلاغات للمراجعة"],
+    "Result": ["نتیجہ","النتيجة"],
+    "Review": ["تبصرہ","مراجعة"],
+    "Review not found": ["تبصرہ نہیں ملا","لم يتم العثور على المراجعة"],
+    "Reviewer note": ["جائزہ لینے والے کا نوٹ","ملاحظة المراجع"],
+    "Right-aligned messages were sent by the reporter.": ["دائیں جانب والے پیغامات رپورٹ کرنے والے نے بھیجے۔","الرسائل على اليمين أرسلها المُبلِّغ."],
+    "Rishta": ["رشتہ","زواج"],
+    "Rishta Connect Global": ["رشتہ کنیکٹ گلوبل","Rishta Connect Global"],
+    "Rishta Connect Global logo": ["رشتہ کنیکٹ گلوبل کا لوگو","شعار Rishta Connect Global"],
+    "Say briefly what is wrong with this review.": ["مختصراً بتائیں اس تبصرے میں کیا خرابی ہے۔","اذكر باختصار ما الخطأ في هذه المراجعة."],
+    "Search target or reason": ["ہدف یا وجہ تلاش کریں","ابحث عن الهدف أو السبب"],
+    "Sign in required": ["لاگ اِن ضروری ہے","تسجيل الدخول مطلوب"],
+    "Sign-in expired. Please try again.": ["لاگ اِن کی مدت ختم ہو گئی۔ دوبارہ کوشش کریں۔","انتهت صلاحية تسجيل الدخول. حاول مرة أخرى."],
+    "Signed in as": ["لاگ اِن بطور","تم تسجيل الدخول باسم"],
+    "Size": ["سائز","الحجم"],
+    "Something went wrong. Try again.": ["کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔","حدث خطأ ما. حاول مرة أخرى."],
+    "Specialization": ["مہارت","التخصص"],
+    "Started": ["شروع ہوا","بدأ"],
+    "Status": ["حالت","الحالة"],
+    "Successful": ["کامیاب","ناجح"],
+    "Suspend an approved broker instead": ["اس کے بجائے منظور شدہ بروکر کو معطل کریں","أوقف وسيطًا معتمدًا بدلًا من ذلك"],
+    "Suspend member": ["ممبر کو معطل کریں","إيقاف العضو"],
+    "Target": ["ہدف","الهدف"],
+    "That picture is too small. Choose one at least 64 pixels wide.": ["یہ تصویر بہت چھوٹی ہے۔ کم از کم 64 پکسل چوڑی تصویر منتخب کریں۔","الصورة صغيرة جدًا. اختر صورة عرضها 64 بكسل على الأقل."],
+    "The log is append-only: entries cannot be edited or deleted through the app. Export uses the filters you last applied, and each export is recorded here.": ["یہ لاگ صرف اضافے کے لیے ہے: اندراجات ایپ سے ایڈٹ یا حذف نہیں ہو سکتے۔ ایکسپورٹ آپ کے آخری فلٹر استعمال کرتا ہے اور ہر ایکسپورٹ یہاں درج ہوتا ہے۔","السجل للإضافة فقط: لا يمكن تعديل السجلات أو حذفها عبر التطبيق. يستخدم التصدير آخر مرشحات طبقتها ويُسجَّل كل تصدير هنا."],
+    "The member is not told who reported them.": ["ممبر کو نہیں بتایا جاتا کہ رپورٹ کس نے کی۔","لا يُخبَر العضو بمن أبلغ عنه."],
+    "The queue is clear.": ["قطار خالی ہے۔","لا توجد عناصر في قائمة الانتظار."],
+    "This appeal was already decided": ["اس اپیل کا فیصلہ پہلے ہو چکا ہے","تم البت في هذا الاعتراض مسبقًا"],
+    "This email is linked to a different Apple account.": ["یہ ای میل کسی اور Apple اکاؤنٹ سے منسلک ہے۔","هذا البريد مرتبط بحساب Apple آخر."],
+    "This is your own review.": ["یہ آپ کا اپنا تبصرہ ہے۔","هذه مراجعتك."],
+    "This member is unavailable.": ["یہ ممبر دستیاب نہیں۔","هذا العضو غير متاح."],
+    "This permanently removes your profile, photo, messages and shortlist.": ["اس سے آپ کا پروفائل، تصویر، پیغامات اور شارٹ لسٹ ہمیشہ کے لیے ہٹ جائیں گے۔","سيؤدي هذا إلى إزالة ملفك وصورتك ورسائلك وقائمتك المختصرة نهائيًا."],
+    "This report was already resolved": ["یہ رپورٹ پہلے ہی حل ہو چکی ہے","تمت معالجة هذا البلاغ مسبقًا"],
+    "Too many appeals. Try again later.": ["بہت زیادہ اپیلیں۔ بعد میں کوشش کریں۔","اعتراضات كثيرة جدًا. حاول لاحقًا."],
+    "Too many photo uploads. Try again later.": ["تصاویر بہت زیادہ اپ لوڈ ہوئیں۔ بعد میں کوشش کریں۔","عمليات رفع صور كثيرة جدًا. حاول لاحقًا."],
+    "Too many reports. Try again later.": ["بہت زیادہ رپورٹس۔ بعد میں کوشش کریں۔","بلاغات كثيرة جدًا. حاول لاحقًا."],
+    "Type DELETE to confirm.": ["تصدیق کے لیے DELETE لکھیں۔","اكتب DELETE للتأكيد."],
+    "Unknown appeal type": ["اپیل کی نامعلوم قسم","نوع اعتراض غير معروفة"],
+    "Unknown check": ["نامعلوم جانچ","فحص غير معروف"],
+    "Upload a photo first.": ["پہلے تصویر اپ لوڈ کریں۔","ارفع صورة أولاً."],
+    "Verification queue": ["تصدیق کی قطار","قائمة التوثيق"],
+    "Verified members": ["تصدیق شدہ ممبران","الأعضاء الموثقون"],
+    "Warn member": ["ممبر کو تنبیہ کریں","تحذير العضو"],
+    "Warning not found": ["تنبیہ نہیں ملی","لم يتم العثور على التحذير"],
+    "Warning:": ["تنبیہ:","تحذير:"],
+    "We could not prepare that picture.": ["ہم وہ تصویر تیار نہیں کر سکے۔","تعذر تجهيز تلك الصورة."],
+    "We could not read that picture. Please choose a JPEG or PNG photo.": ["ہم وہ تصویر پڑھ نہیں سکے۔ JPEG یا PNG تصویر منتخب کریں۔","تعذر قراءة تلك الصورة. اختر صورة JPEG أو PNG."],
+    "We received your appeal": ["ہمیں آپ کی اپیل مل گئی","استلمنا اعتراضك"],
+    "What is wrong with this review?": ["اس تبصرے میں کیا خرابی ہے؟","ما الخطأ في هذه المراجعة؟"],
+    "When": ["کب","متى"],
+    "Write a message first": ["پہلے پیغام لکھیں","اكتب رسالة أولاً"],
+    "You already have an appeal waiting for review.": ["آپ کی ایک اپیل پہلے سے جائزے کے انتظار میں ہے۔","لديك اعتراض بانتظار المراجعة بالفعل."],
+    "You already have an open report for this member. We will review it soon.": ["اس ممبر کے خلاف آپ کی رپورٹ پہلے سے کھلی ہے۔ ہم جلد جائزہ لیں گے۔","لديك بلاغ مفتوح عن هذا العضو بالفعل. سنراجعه قريبًا."],
+    "You are sending messages too fast. Wait a moment.": ["آپ بہت تیزی سے پیغام بھیج رہے ہیں۔ ذرا انتظار کریں۔","ترسل الرسائل بسرعة كبيرة. انتظر قليلًا."],
+    "You can appeal from the Broker account tab.": ["آپ بروکر اکاؤنٹ ٹیب سے اپیل کر سکتے ہیں۔","يمكنك الاعتراض من تبويب حساب الوسيط."],
+    "You can't block yourself": ["آپ خود کو بلاک نہیں کر سکتے","لا يمكنك حظر نفسك"],
+    "You can't report yourself": ["آپ خود کی رپورٹ نہیں کر سکتے","لا يمكنك الإبلاغ عن نفسك"],
+    "You have a new review": ["آپ کو نیا تبصرہ ملا ہے","لديك مراجعة جديدة"],
+    "You have not reviewed this broker.": ["آپ نے اس بروکر کا تبصرہ نہیں کیا۔","لم تراجع هذا الوسيط."],
+    "You:": ["آپ:","أنت:"],
+    "Your account is not suspended.": ["آپ کا اکاؤنٹ معطل نہیں ہے۔","حسابك غير موقوف."],
+    "Your account is suspended. Contact support for help.": ["آپ کا اکاؤنٹ معطل ہے۔ مدد کے لیے سپورٹ سے رابطہ کریں۔","حسابك موقوف. تواصل مع الدعم للمساعدة."],
+    "Your account is suspended. Contact support.": ["آپ کا اکاؤنٹ معطل ہے۔ سپورٹ سے رابطہ کریں۔","حسابك موقوف. تواصل مع الدعم."],
+    "Your appeal is under review.": ["آپ کی اپیل زیرِ جائزہ ہے۔","اعتراضك قيد المراجعة."],
+    "Your broker account is": ["آپ کا بروکر اکاؤنٹ ہے","حساب الوسيط الخاص بك"],
+    "Your broker account is active": ["آپ کا بروکر اکاؤنٹ فعال ہے","حساب الوسيط الخاص بك فعّال"],
+    "Your broker account is approved and listed.": ["آپ کا بروکر اکاؤنٹ منظور ہو کر فہرست میں شامل ہے۔","تمت الموافقة على حساب الوسيط الخاص بك وإدراجه."],
+    "Your broker account is not suspended.": ["آپ کا بروکر اکاؤنٹ معطل نہیں ہے۔","حساب الوسيط الخاص بك غير موقوف."],
+    "Your broker account was suspended": ["آپ کا بروکر اکاؤنٹ معطل کر دیا گیا","تم إيقاف حساب الوسيط الخاص بك"],
+    "Your broker application was not approved": ["آپ کی بروکر درخواست منظور نہیں ہوئی","لم تتم الموافقة على طلب الوسيط الخاص بك"],
+    "Your photo was removed": ["آپ کی تصویر ہٹا دی گئی","تمت إزالة صورتك"],
+    "Your profile is awaiting approval.": ["آپ کا پروفائل منظوری کا منتظر ہے۔","ملفك بانتظار الموافقة."],
+    "Your profile is not active yet. Complete payment to activate it.": ["آپ کا پروفائل ابھی فعال نہیں۔ فعال کرنے کے لیے ادائیگی مکمل کریں۔","ملفك غير مفعّل بعد. أكمل الدفع لتفعيله."],
+    "Your remaining membership time is not refunded.": ["آپ کی باقی ممبرشپ مدت کی رقم واپس نہیں ہوگی۔","لا يُسترد المبلغ عن المدة المتبقية من عضويتك."],
+    "Your review was hidden": ["آپ کا تبصرہ چھپا دیا گیا","تم إخفاء مراجعتك"],
+    "Your shortlist is full (200).": ["آپ کی شارٹ لسٹ بھر چکی ہے (200)۔","قائمتك المختصرة ممتلئة (200)."],
+    "active warning": ["فعال تنبیہ","تحذير نشط"],
+    "month": ["ماہ","شهر"],
+    "securely": ["محفوظ طریقے سے","بأمان"],
+    "for refunds.": ["رقم واپسی کے لیے۔","للاطلاع على المبالغ المستردة."]
+  };
+
+  const LANGS = { en: { dir: 'ltr', name: 'English' }, ur: { dir: 'rtl', name: 'اردو', i: 0 }, ar: { dir: 'rtl', name: 'العربية', i: 1 } };
+  const norm = s => String(s).replace(/\s+/g, ' ').trim();
+  const LATIN = /[A-Za-z]{2}/;                 // only text that still contains English words needs work
+  const SKIP = 'script,style,noscript,textarea,input,code,pre,select.lang,.b,.chat,[data-notr],[translate="no"],.notranslate';
+  const ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
+  const PUNCT = { ur: { '.': '۔', '?': '؟', ',': '،' }, ar: { '?': '؟', ',': '،' } };
+
+  /* ---------------------------------------------------------------- 2. patterns ----------------- */
+  // Each: regex, then one function per language. (m = regex match, T = translate a fragment, leaving it as is if unknown)
+  const PATTERNS = [
+    { re: /^(\d+) members? found$/, ur: m => `${m[1]} ممبران ملے`, ar: m => `تم العثور على ${m[1]} عضو` },
+    { re: /^Page (\d+) of (\d+)$/, ur: m => `صفحہ ${m[1]} از ${m[2]}`, ar: m => `صفحة ${m[1]} من ${m[2]}` },
+    { re: /^Pay (\S+) (\w+) securely$/, ur: m => `${m[1]} ${m[2]} محفوظ طریقے سے ادا کریں`, ar: m => `ادفع ${m[1]} ${m[2]} بأمان` },
+    { re: /^(\d+) reviews?$/, ur: m => m[1] == 1 ? '1 تبصرہ' : `${m[1]} تبصرے`, ar: m => m[1] == 1 ? 'مراجعة واحدة' : `${m[1]} مراجعات` },
+    { re: /^(\d+) reports?$/, ur: m => `${m[1]} رپورٹ`, ar: m => `${m[1]} بلاغ` },
+    { re: /^(\d+) active warnings?$/, ur: m => `${m[1]} فعال تنبیہ`, ar: m => `${m[1]} تحذير نشط` },
+    { re: /^(\d+) yrs?$/, ur: m => `${m[1]} سال`, ar: m => `${m[1]} سنة` },
+    { re: /^(\d+) months?$/, ur: m => `${m[1]} ماہ`, ar: m => `${m[1]} شهر` },
+    { re: /^(.+) active until (.+)$/, ur: (m, T) => `${T(m[1])} ${m[2]} تک فعال ہے`, ar: (m, T) => `${T(m[1])} فعّالة حتى ${m[2]}` },
+    { re: /^Signed in as (.+)$/, ur: m => `${m[1]} کے طور پر لاگ اِن`, ar: m => `تم تسجيل الدخول باسم ${m[1]}` },
+    { re: /^Suspend (.+)\? Enter a reason:$/, ur: m => `${m[1]} کو معطل کریں؟ وجہ لکھیں:`, ar: m => `إيقاف ${m[1]}؟ اكتب السبب:` },
+    { re: /^Reject (.+)\? Enter a reason:$/, ur: m => `${m[1]} کی درخواست مسترد کریں؟ وجہ لکھیں:`, ar: m => `رفض ${m[1]}؟ اكتب السبب:` },
+    { re: /^Block (.+)\? You will no longer see each other in search or be able to message\.$/, ur: m => `${m[1]} کو بلاک کریں؟ آپ ایک دوسرے کو تلاش میں نہیں دیکھ سکیں گے اور پیغام نہیں بھیج سکیں گے۔`, ar: m => `حظر ${m[1]}؟ لن ترى أحدكما الآخر في البحث ولن تتمكنا من المراسلة.` },
+    { re: /^Refund (\S+) (\w+) to (.+)\? Enter a reason:$/, ur: m => `${m[3]} کو ${m[1]} ${m[2]} واپس کریں؟ وجہ لکھیں:`, ar: m => `استرداد ${m[1]} ${m[2]} إلى ${m[3]}؟ اكتب السبب:` },
+    { re: /^Remove the photo of (.+)\? Enter a reason \(the member will see it\):$/, ur: m => `${m[1]} کی تصویر ہٹائیں؟ وجہ لکھیں (ممبر اسے دیکھے گا):`, ar: m => `إزالة صورة ${m[1]}؟ اكتب السبب (سيراه العضو):` },
+    { re: /^Your earlier appeal was decided less than (\d+) days ago\.$/, ur: m => `آپ کی پچھلی اپیل کا فیصلہ ${m[1]} دن سے کم پہلے ہوا تھا۔`, ar: m => `صدر القرار في اعتراضك السابق منذ أقل من ${m[1]} يومًا.` },
+    { re: /^A member rated you (\d) out of 5\. Open your broker page to read it\.$/, ur: m => `ایک ممبر نے آپ کو 5 میں سے ${m[1]} ریٹنگ دی۔ پڑھنے کے لیے اپنا بروکر پیج کھولیں۔`, ar: m => `قيّمك أحد الأعضاء بـ ${m[1]} من 5. افتح صفحة الوسيط لقراءة المراجعة.` },
+    { re: /^A member appealed a (.+) decision \(appeal #(\d+)\)\. Open the admin panel to review it\.$/, ur: (m, T) => `ایک ممبر نے ${T(m[1])} کے فیصلے کی اپیل کی (اپیل نمبر ${m[2]})۔ دیکھنے کے لیے ایڈمن پینل کھولیں۔`, ar: (m, T) => `اعترض أحد الأعضاء على قرار ${T(m[1])} (اعتراض رقم ${m[2]}). افتح لوحة الإدارة لمراجعته.` },
+    { re: /^Our team removed your profile photo because it did not follow the rules \((.+)\)\.$/, ur: m => `ہماری ٹیم نے آپ کی پروفائل تصویر اس لیے ہٹا دی کہ وہ اصولوں کے مطابق نہیں تھی (${m[1]})۔`, ar: m => `أزال فريقنا صورة ملفك لأنها لا تتوافق مع القواعد (${m[1]}).` },
+  ];
+
+  /* ---------------------------------------------------------------- 3. lookup -------------------- */
+  const cur = () => { try { return typeof lang !== 'undefined' ? lang : (document.documentElement.lang || 'en'); } catch (e) { return 'en'; } };
+  const idx = code => (LANGS[code] && LANGS[code].i);
+  const missing = new Set();
+
+  /** Translate one already-normalised string. Returns the translation, or null when it is not known. */
+  function tr(t, code) {
+    const i = idx(code); if (i === undefined || !t) return null;
+    const e = DICT[t]; if (e && e[i]) return e[i];
+    for (const p of PATTERNS) { const m = p.re.exec(t); if (m && p[code]) { let r = p[code](m, s => tr(norm(s), code) || s); if (r) return code === 'ar' ? r.replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]) : r; } }
+    let m;
+    // "Label (3)"  ->  translated label + the number
+    if ((m = /^(.+?)\s*\((\d+)\)$/.exec(t))) { const h = tr(m[1], code); if (h) return `${h} (${m[2]})`; }
+    // trailing punctuation: "Warning:" "Done." "Really?"
+    if ((m = /^(.*[^\s.:!?…,;])\s*([.:!?…,;]+)$/.exec(t))) {
+      const h = tr(m[1], code); if (h) return h + m[2].replace(/[.?,]/g, c => (PUNCT[code] && PUNCT[code][c]) || c);
+    }
+    // "Label: value" and "a · b · c": translate the parts that are known
+    if (t.includes(' · ')) { const ps = t.split(' · '), out = ps.map(s => tr(s, code)); if (out.some(Boolean)) return ps.map((s, k) => out[k] || s).join(' · '); }
+    if ((m = /^([^:]{2,60}): (.+)$/.exec(t))) { const a = tr(m[1], code); if (a) return `${a}: ${tr(m[2], code) || m[2]}`; }
+    return null;
+  }
+  const translate = (text, code) => { const t = norm(text); return t ? (tr(t, code || cur()) || null) : null; };
+
+  /* ---------------------------------------------------------------- 4. walker ------------------- */
+  const textRec = new WeakMap(), attrRec = new WeakMap();   // what we changed, so it can be undone
+
+  function doText(n, code) {
+    const raw = n.nodeValue, rec = textRec.get(n), ours = rec && raw === rec.out, src = ours ? rec.src : raw;
+    if (code === 'en') { if (ours) { n.nodeValue = rec.src; textRec.delete(n); } return; }
+    if (rec && !ours) textRec.delete(n);                       // the page rewrote it: start again from the new text
+    if (!LATIN.test(src) || (n.parentElement && n.parentElement.closest(SKIP))) return;
+    const t = norm(src), h = tr(t, code);
+    if (!h) { if (missing.size < 3000) missing.add(t); return; }
+    const out = src.match(/^\s*/)[0] + h + src.match(/\s*$/)[0];
+    n.nodeValue = out; textRec.set(n, { src, out });
+  }
+  function doAttr(el, a, code) {
+    let r = attrRec.get(el); if (!r) attrRec.set(el, r = {});
+    const raw = el.getAttribute(a); if (raw == null) return;
+    const rec = r[a], ours = rec && raw === rec.out, src = ours ? rec.src : raw;
+    if (code === 'en') { if (ours) { el.setAttribute(a, rec.src); delete r[a]; } return; }
+    if (rec && !ours) delete r[a];
+    if (!LATIN.test(src) || el.closest('[data-notr],[translate="no"],.notranslate,script,style')) return;   // inputs keep their own placeholders translated
+    const h = tr(norm(src), code);
+    if (!h) { if (missing.size < 3000) missing.add(norm(src)); return; }
+    el.setAttribute(a, h); r[a] = { src, out: h };
+  }
+  function doElement(el, code) {
+    for (const a of ATTRS) if (el.hasAttribute && el.hasAttribute(a)) doAttr(el, a, code);
+    if (el.tagName === 'INPUT' && /^(submit|button|reset)$/i.test(el.type) && el.hasAttribute('value')) doAttr(el, 'value', code);
+  }
+  /** Visit a node and everything inside it. */
+  function walk(root, code) {
+    if (!root || !root.isConnected) return;
+    if (root.nodeType === 3) return doText(root, code);
+    if (root.nodeType !== 1) return;
+    if (root.closest && root.closest('[data-notr],[translate="no"],.notranslate,script,style')) return;
+    doElement(root, code);
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    let n; while ((n = w.nextNode())) { if (n.nodeType === 3) doText(n, code); else doElement(n, code); }
+  }
+  function pageChrome(code) {
+    const L = LANGS[code] || LANGS.en;
+    if (document.documentElement.lang !== code) document.documentElement.lang = code;
+    if (document.documentElement.dir !== L.dir) document.documentElement.dir = L.dir;
+    // the browser tab title and the search-engine description
+    if (!pageChrome.t) pageChrome.t = document.title;
+    const d = document.querySelector('meta[name="description"]'); if (d && !pageChrome.d) pageChrome.d = d.content;
+    document.title = ((code !== 'en' && tr(norm(pageChrome.t), code)) || pageChrome.t).trim();
+    if (d) d.content = (code !== 'en' && tr(norm(pageChrome.d || ''), code)) || pageChrome.d || d.content;
+  }
+  /** Translate (or restore) the whole page. */
+  function apply(root) {
+    const code = cur();
+    try { pageChrome(code); walk(root || document.body, code); } finally { if (obs) obs.takeRecords(); }
+  }
+
+  /* ---------------------------------------------------------------- 5. watcher ------------------- */
+  let obs = null;
+  function watch() {
+    obs = new MutationObserver(recs => {
+      const code = cur(); if (code === 'en') { obs.takeRecords(); return; }
+      const nodes = new Set(), attrs = new Set();
+      for (const r of recs) {
+        if (r.type === 'childList') r.addedNodes.forEach(n => nodes.add(n));
+        else if (r.type === 'characterData') nodes.add(r.target);
+        else if (r.type === 'attributes') attrs.add(r.target);
+      }
+      nodes.forEach(n => walk(n, code));
+      attrs.forEach(el => { if (el.isConnected) doElement(el, code); });
+      obs.takeRecords();                                       // ignore the changes we just made ourselves
+    });
+    obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS.concat('value') });
+  }
+
+  /* ---------------------------------------------------------------- 6. browser dialogs ----------- */
+  for (const k of ['alert', 'confirm', 'prompt']) {
+    const orig = window[k]; if (typeof orig !== 'function') continue;
+    window[k] = function (msg, ...rest) {
+      const code = cur();
+      if (code !== 'en' && typeof msg === 'string') { const h = translate(msg, code); if (h) msg = h; }
+      return orig.call(window, msg, ...rest);
+    };
+  }
+
+  /* ---------------------------------------------------------------- 7. public API ---------------- */
+  window.I18N = {
+    dict: DICT, langs: LANGS, translate,
+    apply, trApply: apply,
+    add(entries) { Object.assign(DICT, entries); },
+    missing() { return [...missing].sort(); },
+  };
+  window.trApply = apply;
+  const start = () => { watch(); apply(); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
-</script>
-<script src="/i18n.js"></script>
-</body></html>
