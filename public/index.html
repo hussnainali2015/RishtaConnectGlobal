@@ -4,7 +4,6 @@
 <title>Rishta Connect Global</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async defer></script>
 <style>
 :root{--mr:#7b1030;--mr2:#4f0a1f;--gd:#b88a2e;--gd2:#e2c277;--gd3:#f3e3b8;--bg:#fbf5ec;--cd:#fff;--ink:#2b1a20;--mu:#75646a;--ln:#e6d8c4;--ok:#1f7a4a;color-scheme:light;box-sizing:border-box}
 *{box-sizing:border-box}
@@ -324,24 +323,16 @@ ${appealSec()}<h3 style="margin-top:24px">Reports to review (${RP.open.length})<
 
 /* ---- actions ---- */
 function closeM(){$('#modal').innerHTML=''}
-function login(n=0){$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Welcome</h2><p class="mu">Sign in to create your profile.</p><div id="gbtn" style="min-height:44px"></div><br><button class="btn w" id="abtn" style="background:#000;color:#fff" disabled onclick="appleLogin()">${cfg&&cfg.appleClientId?'Continue with Apple':'Apple sign-in is not configured'}</button><div id="sihint" class="lock" style="display:none;margin-top:12px"></div><p class="mu" style="margin-top:12px">By continuing you agree to: <a href="/terms" target="_blank" rel="noopener">Terms</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></p></div></div>`;initG(0);prepApple(0)}
+function login(n=0){$('#modal').innerHTML=`<div class="modal" onclick="if(event.target==this)closeM()"><div class="card"><h2>Welcome</h2><p class="mu">Sign in to create your profile.</p><div id="gbtn" style="min-height:44px"></div><div id="sihint" class="lock" style="display:none;margin-top:12px"></div><p class="mu" style="margin-top:12px">By continuing you agree to: <a href="/terms" target="_blank" rel="noopener">Terms</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></p></div></div>`;initG(0)}
 function siHint(m){const h=$('#sihint');if(h&&m){h.style.display='block';h.innerHTML=(h.dataset.t?h.innerHTML+'<br>':'')+esc(m);h.dataset.t=1}}
 function siCheck(){if(!cfg)return;const o=location.origin;
- if(cfg.baseUrl&&o!==cfg.baseUrl)siHint('You opened the site at '+o+' but it is set up for '+cfg.baseUrl+'. Google and Apple only work at the registered address. Open '+cfg.baseUrl+' instead.');
+ if(cfg.baseUrl&&o!==cfg.baseUrl)siHint('You opened the site at '+o+' but it is set up for '+cfg.baseUrl+'. Google sign-in only works at the registered address. Open '+cfg.baseUrl+' instead.');
  if(!/^https:/.test(o)&&!/^http:\/\/localhost/.test(o))siHint('Sign-in needs a secure address starting with https://.');
  if(!cfg.googleOk)siHint('Google sign-in is not set up: GOOGLE_CLIENT_ID in the site settings must end with .apps.googleusercontent.com.')}
 function initG(n){if(!window.google||!cfg){if(n<30)setTimeout(()=>initG(n+1),300);else{toast('Google sign-in could not load. Check your connection.');siHint('The Google sign-in script did not load. Check the internet connection, and that nothing (ad blocker, firewall) blocks accounts.google.com.')}return}
  siCheck();
  google.accounts.id.initialize({client_id:cfg.googleClientId,callback:r=>act(async()=>{await api('/api/auth/google',{credential:r.credential});me=await api('/api/me');closeM();go(me.profile?(active()?'search':'pay'):'profile')})});
  google.accounts.id.renderButton($('#gbtn'),{theme:'filled_black',size:'large',text:'continue_with',width:300})}
-let appleReady=false;
-async function prepApple(n){const b=$('#abtn');appleReady=false;if(b)b.disabled=true;if(!cfg||!cfg.appleClientId)return;
- if(!window.AppleID){if(n<30)setTimeout(()=>prepApple(n+1),300);else siHint('The Apple sign-in script did not load. Check the internet connection.');return}
- try{const {nonce}=await api('/api/auth/apple/nonce');AppleID.auth.init({clientId:cfg.appleClientId,scope:'name email',redirectURI:cfg.appleRedirectUri,state:'rcg',nonce,usePopup:true});appleReady=true;const b2=$('#abtn');if(b2)b2.disabled=false}catch(e){siHint('Apple sign-in could not start. The Services ID and Return URL in the site settings must match what is registered with Apple.')}}
-function appleLogin(){if(!appleReady)return toast('Apple sign-in is still loading. Try again in a moment.');appleReady=false; // signIn() must run straight from the click so the popup is not blocked; the nonce was fetched beforehand
- AppleID.auth.signIn().then(async r=>{const nm=r.user&&r.user.name?[r.user.name.firstName,r.user.name.lastName].filter(Boolean).join(' '):'';
-  await api('/api/auth/apple',{id_token:r.authorization.id_token,name:nm});me=await api('/api/me');closeM();go(me.profile?(active()?'search':'pay'):'profile')})
- .catch(e=>{if(e&&e.message)toast(e.message);else if(!e||(e.error!=='popup_closed_by_user'&&e.error!=='user_cancelled_authorize'))toast('Apple sign-in did not complete. Please try again.');prepApple(0)})}
 function logout(){act(async()=>{await api('/api/auth/logout',{});me=null;go('home')})}
 function doSearch(e){e.preventDefault();const f=Object.fromEntries([...new FormData(e.target)].filter(([,v])=>v));go('search',f);return false}
 function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.agree=!!f.agree;const had=!!(me&&me.profile);act(async()=>{await api('/api/profile',f);me=await api('/api/me');if(had){toast('Profile saved');go('profile')}else go('pay')});return false}
