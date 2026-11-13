@@ -9,15 +9,7 @@ need('JWT_SECRET', v => v.length >= 32, 'Use 32 or more random characters: opens
 need('GOOGLE_CLIENT_ID', v => /\.apps\.googleusercontent\.com$/.test(v), 'It ends with .apps.googleusercontent.com (Google Cloud Console, Credentials).');
 need('ADMIN_EMAILS', v => /@/.test(v), 'Put your own Google email so you can open the admin panel.');
 for (const [k, v] of Object.entries(E)) if (/^\[REQUIRED/.test(String(v).trim())) bad.push(`${k} still says [REQUIRED ...]. Replace the whole bracket with your own value.`);
-const pk = E.MOYASAR_PUBLISHABLE_KEY || '', sk = E.MOYASAR_SECRET_KEY || '';
-need('MOYASAR_PUBLISHABLE_KEY', v => /^pk_(test|live)_[A-Za-z0-9_-]{10,}$/.test(v), 'It starts with pk_test_ or pk_live_ and has no spaces or dots.');
-need('MOYASAR_SECRET_KEY', v => /^sk_(test|live)_[A-Za-z0-9_-]{10,}$/.test(v), 'It starts with sk_test_ or sk_live_. Paste the whole key; never a masked one with dots.');
-if (pk && sk && pk.slice(3, 7) !== sk.slice(3, 7)) bad.push('The Moyasar keys are from different modes (one test, one live). Use a matching pair.');
-need('MOYASAR_WEBHOOK_SECRET', v => v.length >= 16, 'A long random value, the same one you typed in the Moyasar webhook settings.');
-const live = /^pk_live_/.test(pk);
-if (live && !/^https:/.test(E.BASE_URL || '')) bad.push('Live payments need an https:// BASE_URL.');
 if (E.NODE_ENV !== 'production') warn.push('NODE_ENV is not "production". Set NODE_ENV=production on the real server so cookies are marked Secure.');
-if (live) warn.push('LIVE payment keys are in use. Real money will move.');
 if (E.BACKUP_ENABLED === 'true') { if (!/^[0-9a-f]{64}$/i.test(E.BACKUP_KEY || '')) bad.push('BACKUP_ENABLED is true but BACKUP_KEY is not 64 hex characters (openssl rand -hex 32). It must be on ONE line.'); }
 else warn.push('Backups are switched off (BACKUP_ENABLED=false). Turn them on before launch.');
 if (E.BACKUP_AT && !/^([01]\d|2[0-3]):[0-5]\d$/.test(E.BACKUP_AT)) bad.push('BACKUP_AT must look like 00:30 (UTC).');
@@ -37,7 +29,7 @@ if (E.PERSIST_SUPABASE_URL || E.PERSIST_SUPABASE_KEY) {
 if (!E.SUPPORT_EMAIL) warn.push('SUPPORT_EMAIL is empty. The Contact page and Privacy Policy will have no address for members to write to.');
 if (E.LEGAL_REVIEWED !== 'true') warn.push('LEGAL_REVIEWED is not "true". The Terms and Privacy pages show a "draft" notice until a lawyer has reviewed them.');
 try { // typos in the file itself: the mistakes that actually happen (a hyphen or underscore instead of =, a key split over two lines)
-  const KNOWN = /^(NODE_ENV|PORT|BASE_URL|JWT_SECRET|GOOGLE_CLIENT_ID|ADMIN_EMAILS|MOYASAR_PUBLISHABLE_KEY|MOYASAR_SECRET_KEY|MOYASAR_WEBHOOK_SECRET|CURRENCY|REQUIRE_APPROVAL|AUTO_APPROVE_ON_PAYMENT|FOUNDER_PRICE|FOUNDER_LIMIT|APPLE_CLIENT_ID|APPLE_REDIRECT_URI|BACKUP_ENABLED|BACKUP_KEY|BACKUP_AT|BACKUP_KEEP|BACKUP_DIR|BACKUP_COPY_DIR|BUSINESS_NAME|SUPPORT_EMAIL|LEGAL_REVIEWED|LEGAL_JURISDICTION|DB_FILE|PERSIST_SUPABASE_URL|PERSIST_SUPABASE_KEY|PERSIST_BUCKET|PERSIST_EVERY_SECONDS|API_RATE_LIMIT|DOMAIN)$/;
+  const KNOWN = /^(NODE_ENV|PORT|BASE_URL|JWT_SECRET|GOOGLE_CLIENT_ID|ADMIN_EMAILS|REQUIRE_APPROVAL|APPLE_CLIENT_ID|APPLE_REDIRECT_URI|BACKUP_ENABLED|BACKUP_KEY|BACKUP_AT|BACKUP_KEEP|BACKUP_DIR|BACKUP_COPY_DIR|BUSINESS_NAME|SUPPORT_EMAIL|LEGAL_REVIEWED|LEGAL_JURISDICTION|DB_FILE|PERSIST_SUPABASE_URL|PERSIST_SUPABASE_KEY|PERSIST_BUCKET|PERSIST_EVERY_SECONDS|API_RATE_LIMIT|DOMAIN)$/;
   require('fs').readFileSync('.env', 'utf8').split(/\r?\n/).forEach((l, n) => {
     if (!l.trim() || /^\s*#/.test(l)) return;
     const m = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(l);
