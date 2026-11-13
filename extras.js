@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Added routes: legal pages, plans, health check, member detail, shortlist, profile photos,
+ * Added routes: legal pages, health check, member detail, shortlist, profile photos,
  * account data download and account deletion. Registered from server.js with the shared helpers.
  */
 const legal = require('./legal');
@@ -35,7 +35,7 @@ function cleanJpeg(buf) {
 }
 
 module.exports = function (x) {
-  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, PLANS, CUR, admins, founderState, viewerEmail } = x;
+  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, admins } = x;
   const cfg = {
     name: E.BUSINESS_NAME || 'Rishta Connect Global', email: E.SUPPORT_EMAIL || '', reviewed: E.LEGAL_REVIEWED === 'true',
     juris: E.LEGAL_JURISDICTION || 'the laws of the country where the operator of this website is established', backupDays: String(parseInt(E.BACKUP_KEEP, 10) || 14),
@@ -49,28 +49,18 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
 
   /* ---- health, robots, legal ---- */
   app.get('/healthz', (req, res) => { try { db.prepare('SELECT 1').get(); res.json({ ok: true }); } catch { res.status(503).json({ ok: false }); } });
-  app.get('/robots.txt', (req, res) => { res.type('text/plain'); res.send('User-agent: *\nDisallow: /api/\nDisallow: /payment/\n'); });
+  app.get('/robots.txt', (req, res) => { res.type('text/plain'); res.send('User-agent: *\nDisallow: /api/\n'); });
   for (const p of ['terms', 'privacy', 'safety', 'contact']) app.get('/' + p, (req, res) => res.type('html').send(legal[p](cfg)));
-
-  /* ---- plans (prices come only from the server) ---- */
-  app.get('/api/plans', (req, res) => { // the Founder plan is shown to visitors while spots remain, and to the founders themselves; other members do not see it
-    const fs = founderState(viewerEmail(req)), me = viewerEmail(req);
-    res.json(Object.entries(PLANS).filter(([id, p]) => !p.founder || fs.mine || (!me && fs.left > 0)).map(([id, p]) => {
-      const o = { id, name: p.name, price: p.price, months: p.months, currency: CUR, features: p.features || [] };
-      if (p.founder) Object.assign(o, { founder: true, was: PLANS.plus.price, limit: fs.limit, left: fs.left, n: fs.mine });
-      return o;
-    }));
-  });
 
   /* ---- member detail and shortlist ---- */
   const needActive = (req, res) => {
-    if (!membership(req.user.email).active) { res.status(403).json({ error: 'Activate your profile with a membership to view members.' }); return false; }
+    if (!req.user.profile_json) { res.status(403).json({ error: 'Create your profile to view members.' }); return false; }
     if (mstatus(req.user.email) !== 'approved') { res.status(403).json({ error: 'Your profile is awaiting approval.' }); return false; }
     return true;
   };
   const visible = (viewer, email) => { // the one rule for "may this viewer see this member"
     const u = db.prepare('SELECT profile_json FROM users WHERE email=?').get(email);
-    return !!(u && u.profile_json && email !== viewer && membership(email).active && mstatus(email) === 'approved' && !isBlocked(viewer, email));
+    return !!(u && u.profile_json && email !== viewer && mstatus(email) === 'approved' && !isBlocked(viewer, email));
   };
   const hasPhoto = email => !!db.prepare('SELECT 1 FROM photos WHERE email=? AND visible=1').get(email);
   const card = (viewer, email) => {
@@ -133,7 +123,7 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
   });
   app.get('/api/photo/:id', auth, (req, res) => {
     const email = byUid(req.params.id);
-    if (!email || !membership(req.user.email).active || mstatus(req.user.email) !== 'approved' || !visible(req.user.email, email)) return res.status(404).json({ error: 'No photo' });
+    if (!email || !req.user.profile_json || mstatus(req.user.email) !== 'approved' || !visible(req.user.email, email)) return res.status(404).json({ error: 'No photo' });
     const r = db.prepare('SELECT data FROM photos WHERE email=? AND visible=1').get(email);
     r ? sendJpeg(res, r.data) : res.status(404).json({ error: 'No photo' });
   });
@@ -166,9 +156,8 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
       exported_at: now(),
       account: { email: em, name: req.user.name, sign_in: req.user.provider, created_at: req.user.created_at, terms_accepted_at: req.user.consent_at || null, status: mstatus(em) },
       profile: req.user.profile_json ? JSON.parse(req.user.profile_json) : null,
-      membership: membership(em), verification: vstate(em),
+      verification: vstate(em),
       photo: photo ? { shown_to_members: !!photo.visible, jpeg_base64: photo.data.toString('base64') } : null,
-      payments: one('SELECT id,plan,amount,currency,status,created_at,paid_at,refunded_at FROM payments WHERE email=? ORDER BY created_at', em),
       conversations: convs.map(c => ({ with: x.whoIs(c.u1 === em ? c.u2 : c.u1).n, messages: one('SELECT sender,body,created_at FROM messages WHERE conv_id=? ORDER BY id LIMIT 5000', c.id).map(m => ({ from: m.sender === em ? 'you' : 'them', body: m.body, at: m.created_at })) })),
       broker_reviews_written: one('SELECT b.rating,b.body,b.status,b.created_at,b.updated_at FROM broker_reviews b WHERE b.reviewer=? ORDER BY b.id', em),
       shortlist_count: db.prepare('SELECT COUNT(*) n FROM shortlist WHERE owner=?').get(em).n,
@@ -187,15 +176,14 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
     const em = req.user.email;
     if (!req.body || req.body.confirm !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm.' });
     if (mstatus(em) === 'suspended') return res.status(403).json({ error: 'Your account is suspended. Contact support.' });
-    const recent = new Date(Date.now() - 2 * 3600_000).toISOString();
-    if (db.prepare("SELECT 1 FROM payments WHERE email=? AND status='pending' AND created_at>?").get(em, recent)) return res.status(409).json({ error: 'A payment is still being confirmed. Try again in a few minutes.' });
     const g = ghost(em);
     db.transaction(() => {
       const cids = db.prepare('SELECT id FROM conversations WHERE u1=? OR u2=?').all(em, em).map(r => r.id);
       for (const id of cids) { db.prepare('DELETE FROM messages WHERE conv_id=?').run(id); db.prepare('DELETE FROM conv_reads WHERE conv_id=?').run(id); db.prepare('DELETE FROM conversations WHERE id=?').run(id); }
-      for (const [t, col] of [['photos', 'email'], ['memberships', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em);
+      for (const [t, col] of [['photos', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em);
       db.prepare('DELETE FROM review_flags WHERE review_id NOT IN (SELECT id FROM broker_reviews)').run();
-      db.prepare('UPDATE payments SET email=? WHERE email=?').run(g, em); // accounting records stay, without the email
+      for (const t of ['memberships', 'payments']) if (db.prepare('SELECT 1 FROM sqlite_master WHERE name=?').get(t)) // left over from before the site became free: old records are removed or made anonymous
+        t === 'memberships' ? db.prepare('DELETE FROM memberships WHERE email=?').run(em) : db.prepare('UPDATE payments SET email=? WHERE email=?').run(g, em);
       db.prepare('UPDATE reports SET reporter=? WHERE reporter=?').run(g, em);
       db.prepare('DELETE FROM users WHERE email=?').run(em);
       audit('self', 'account-deleted', g, 'member deleted own account');
