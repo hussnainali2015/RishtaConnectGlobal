@@ -1,9 +1,8 @@
 'use strict';
 /**
  * Rishta Connect Global - backend (Node 18+)
- * Google/Apple sign-in, profile storage, Moyasar checkout, webhook, refunds, admin API.
- * Payment rule: a profile is ACTIVE only when a membership row has expires_at in the
- * future, and a membership is only ever created by a gateway-confirmed payment.
+ * Google sign-in, free profile registration, search, chat, brokers, moderation, admin API.
+ * The site is informational and free: it takes no payments and keeps no financial data.
  */
 require('dotenv').config();
 const path = require('path');
@@ -19,31 +18,13 @@ const { createRemoteJWKSet, jwtVerify } = require('jose');
 const { runBackup } = require('./backup');
 
 const E = process.env;
-for (const k of ['BASE_URL', 'JWT_SECRET', 'GOOGLE_CLIENT_ID', 'MOYASAR_PUBLISHABLE_KEY', 'MOYASAR_SECRET_KEY', 'MOYASAR_WEBHOOK_SECRET']) {
+for (const k of ['BASE_URL', 'JWT_SECRET', 'GOOGLE_CLIENT_ID']) {
   if (!E[k]) { console.error('Missing environment variable: ' + k); process.exit(1); }
 }
 if (E.JWT_SECRET.length < 32) { console.error('JWT_SECRET must be at least 32 characters'); process.exit(1); }
 
 const BK = { on: E.BACKUP_ENABLED === 'true', dir: path.resolve(E.BACKUP_DIR || path.join(__dirname, 'backups')), keep: parseInt(E.BACKUP_KEEP, 10) || 14, at: /^([01]\d|2[0-3]):[0-5]\d$/.test(E.BACKUP_AT || '') ? E.BACKUP_AT : '00:30', copy: E.BACKUP_COPY_DIR || '' }; // BACKUP_AT is UTC
 if (BK.on && !/^[0-9a-f]{64}$/i.test(E.BACKUP_KEY || '')) { console.error('BACKUP_ENABLED is true but BACKUP_KEY is missing. Generate one with: openssl rand -hex 32'); process.exit(1); }
-const CUR = E.CURRENCY || 'SAR';
-// Moyasar. The publishable key may reach the browser; the secret key and webhook secret never leave this server.
-const MZ = { base: (E.NODE_ENV !== 'production' && E.MOYASAR_API_BASE) || 'https://api.moyasar.com/v1', // the override exists only for automated tests and is ignored in production
-  pk: E.MOYASAR_PUBLISHABLE_KEY, sk: E.MOYASAR_SECRET_KEY, hook: E.MOYASAR_WEBHOOK_SECRET };
-const mzMode = (k, kind) => (new RegExp('^' + kind + '_(test|live)_[A-Za-z0-9_-]{10,}$').exec(k || '') || [])[1];
-MZ.mode = mzMode(MZ.pk, 'pk');
-if (!MZ.mode || mzMode(MZ.sk, 'sk') !== MZ.mode) { console.error('MOYASAR_PUBLISHABLE_KEY must start with pk_test_ or pk_live_, and MOYASAR_SECRET_KEY with sk_test_ or sk_live_ of the SAME mode.'); process.exit(1); }
-if (String(MZ.hook).length < 16) { console.error('MOYASAR_WEBHOOK_SECRET must be at least 16 characters (openssl rand -hex 24).'); process.exit(1); }
-if (MZ.mode === 'test') console.warn('Moyasar is in TEST mode: no real money will move.');
-const PLANS = { // prices live on the server only; the browser sends just the plan id
-  basic: { name: 'Basic Plan', price: 29, months: 1, features: ['View trusted profiles', 'Send limited messages', 'Basic search'] },
-  prem: { name: 'Premium Plan', price: 69, months: 3, features: ['View all profiles', 'Unlimited messages', 'Profile highlights'] },
-  plus: { name: 'Premium Plus', price: 119, months: 6, features: ['All Premium features', 'Priority broker support', 'Verified badge boost'] },
-  // Founder Membership: Premium Plus at a lower price, only for the first FOUNDER_LIMIT accounts that sign up. Price and limit are set in the site settings.
-  founder: { name: 'Founder Membership', price: Number(E.FOUNDER_PRICE) > 0 ? Number(E.FOUNDER_PRICE) : 79, months: 6, founder: true,
-    features: ['All Premium Plus features', 'Founder price for the whole period', 'Founder badge on your profile'] },
-};
-const FOUNDER_LIMIT = Math.max(0, parseInt(E.FOUNDER_LIMIT, 10) || 100);
 const admins = new Set((E.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
 
 /* ---------- database ---------- */
@@ -51,12 +32,6 @@ const db = new Database(E.DB_FILE || path.join(__dirname, 'rishta.db'));
 db.pragma('journal_mode = WAL');
 db.exec(`
 CREATE TABLE IF NOT EXISTS users(email TEXT PRIMARY KEY, name TEXT, provider TEXT, profile_json TEXT, created_at TEXT);
-CREATE TABLE IF NOT EXISTS founders(email TEXT PRIMARY KEY, n INTEGER NOT NULL UNIQUE, claimed_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS payments(
-  id TEXT PRIMARY KEY, email TEXT NOT NULL, plan TEXT NOT NULL, amount REAL NOT NULL, currency TEXT NOT NULL,
-  status TEXT NOT NULL, tran_ref TEXT, refund_ref TEXT, created_at TEXT, paid_at TEXT, refunded_at TEXT, period_from TEXT, period_to TEXT);
-CREATE INDEX IF NOT EXISTS pay_ref ON payments(tran_ref);
-CREATE TABLE IF NOT EXISTS memberships(email TEXT PRIMARY KEY, plan TEXT, expires_at TEXT);
 CREATE TABLE IF NOT EXISTS verification(email TEXT PRIMARY KEY, identity INTEGER DEFAULT 0, photo INTEGER DEFAULT 0, background INTEGER DEFAULT 0, revoked_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS member_status(email TEXT PRIMARY KEY, status TEXT NOT NULL, reason TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS brokers(email TEXT PRIMARY KEY, profile_json TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, created_at TEXT, updated_at TEXT);
@@ -90,7 +65,6 @@ CREATE TABLE IF NOT EXISTS appeals(id INTEGER PRIMARY KEY AUTOINCREMENT, email T
   original_admin TEXT, admin_note TEXT, decided_by TEXT, created_at TEXT, resolved_at TEXT);
 CREATE INDEX IF NOT EXISTS appeal_state ON appeals(status,created_at);
 CREATE TABLE IF NOT EXISTS backup_log(id INTEGER PRIMARY KEY AUTOINCREMENT, started_at TEXT, finished_at TEXT, status TEXT, trigger TEXT, files TEXT, bytes INTEGER, audit_rows INTEGER, error TEXT);
-CREATE TABLE IF NOT EXISTS webhook_events(id TEXT PRIMARY KEY, type TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, admin TEXT, action TEXT, payment_id TEXT, reason TEXT, at TEXT);
 CREATE INDEX IF NOT EXISTS audit_action ON audit(action,id);
 CREATE TRIGGER IF NOT EXISTS audit_no_update BEFORE UPDATE ON audit BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END;
@@ -98,148 +72,28 @@ CREATE TRIGGER IF NOT EXISTS audit_no_delete BEFORE DELETE ON audit BEGIN SELECT
 `);
 const now = () => new Date().toISOString();
 
-/* ---------- founder spots: the first FOUNDER_LIMIT accounts to sign up (admins do not count) ---------- */
-let founderDone = !FOUNDER_LIMIT; // becomes true once every spot is taken, so later requests skip the check
-const claimFounder = db.transaction(email => {
-  if (founderDone || admins.has(email)) return;
-  if (db.prepare('SELECT 1 FROM founders WHERE email=?').get(email)) return;
-  const n = db.prepare('SELECT COALESCE(MAX(n),0) m FROM founders').get().m + 1;
-  if (n <= FOUNDER_LIMIT) db.prepare('INSERT INTO founders(email,n,claimed_at) VALUES(?,?,?)').run(email, n, now());
-  if (n >= FOUNDER_LIMIT) founderDone = true;
-});
-if (FOUNDER_LIMIT && !db.prepare('SELECT 1 FROM founders LIMIT 1').get()) // site already had members before this feature: the oldest accounts get the first spots
-  for (const u of db.prepare('SELECT email FROM users ORDER BY rowid').all()) claimFounder(u.email);
-const founderState = email => {
-  const taken = db.prepare('SELECT COUNT(*) n FROM founders').get().n, mine = email && db.prepare('SELECT n FROM founders WHERE email=?').get(email);
-  return { limit: FOUNDER_LIMIT, left: Math.max(0, FOUNDER_LIMIT - taken), mine: mine ? mine.n : null };
-};
-const viewerEmail = req => { try { return jwt.verify(req.cookies.rcg_session || '', E.JWT_SECRET).email; } catch { return null; } };
 // Upgrade databases created before reports recorded where they came from.
 // Sign in with Apple: Apple's stable per-app user id, so a returning member is found even if Apple stops sending the email.
 if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === 'apple_sub')) db.exec('ALTER TABLE users ADD COLUMN apple_sub TEXT');
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_apple ON users(apple_sub) WHERE apple_sub IS NOT NULL');
-for (const c of ['period_from', 'period_to']) if (!db.prepare('PRAGMA table_info(payments)').all().some(r => r.name === c)) db.exec('ALTER TABLE payments ADD COLUMN ' + c + ' TEXT');
 if (!db.prepare('PRAGMA table_info(reports)').all().some(c => c.name === 'source')) db.exec('ALTER TABLE reports ADD COLUMN source TEXT');
-const addMonths = (d, m) => { // calendar months in UTC, clamped to the end of a short month (31 Jan + 1 month = 28/29 Feb, never 3 Mar)
-  const x = new Date(d), day = x.getUTCDate();
-  x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + m);
-  x.setUTCDate(Math.min(day, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate()));
-  return x;
-};
-
-/* ---------- Moyasar client (secret key, server only) ---------- */
-async function mzCall(method, endpoint, body) {
-  const r = await fetch(MZ.base + endpoint, {
-    method,
-    headers: { 'content-type': 'application/json', authorization: 'Basic ' + Buffer.from(MZ.sk + ':').toString('base64') },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15_000),
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.message || 'Moyasar request failed (' + r.status + ')');
-  return j;
-}
-const MZ_ID = /^[0-9a-fA-F-]{36}$/; // Moyasar payment ids are UUIDs; anything else never reaches a URL
-const CART = /^RC-[0-9a-f-]{36}$/;
-const cartOf = q => (q.metadata && q.metadata.cart) || ((String(q.description || '').match(/\[(RC-[0-9a-f-]{36})\]/) || [])[1]) || null;
-
-/* ---------- payment state changes (all idempotent) ---------- */
-const settle = db.transaction((p, ref) => {
-  const r = db.prepare("UPDATE payments SET status='paid', tran_ref=?, paid_at=? WHERE id=? AND status IN ('pending','failed')").run(ref, now(), p.id);
-  if (!r.changes) return; // already processed: a repeated webhook does nothing
-  const m = db.prepare('SELECT expires_at FROM memberships WHERE email=?').get(p.email);
-  const base = m && new Date(m.expires_at) > new Date() ? new Date(m.expires_at) : new Date();
-  const exp = addMonths(base, PLANS[p.plan].months).toISOString();
-  db.prepare('UPDATE payments SET period_from=?, period_to=? WHERE id=?').run(base.toISOString(), exp, p.id); // remembered so a refund can take back exactly this time
-  db.prepare('INSERT INTO memberships(email,plan,expires_at) VALUES(?,?,?) ON CONFLICT(email) DO UPDATE SET plan=excluded.plan, expires_at=excluded.expires_at').run(p.email, p.plan, exp);
-  // Automatic approval: a confirmed payment also approves a member who was waiting for review (REQUIRE_APPROVAL=true).
-  // A suspended member is never changed by paying.
-  if (E.AUTO_APPROVE_ON_PAYMENT !== 'false') {
-    const st = db.prepare('SELECT status FROM member_status WHERE email=?').get(p.email);
-    if (st && st.status === 'pending') {
-      db.prepare("UPDATE member_status SET status='approved', reason=NULL, updated_at=? WHERE email=?").run(now(), p.email);
-      audit('system', 'auto-approve-on-payment', p.email, 'payment ' + p.id);
-    }
-  }
-  notify(p.email, 'payment', 'Payment received. Your profile is active', PLANS[p.plan].name + ' is active until ' + new Date(exp).toLocaleDateString('en-GB') + '.');
-});
-const markRefunded = db.transaction((origRef, refundRef) => {
-  const p = db.prepare('SELECT * FROM payments WHERE tran_ref=?').get(origRef);
-  if (!p || p.status === 'refunded') return;
-  db.prepare("UPDATE payments SET status='refunded', refund_ref=?, refunded_at=? WHERE id=?").run(refundRef, now(), p.id);
-  const m = db.prepare('SELECT expires_at FROM memberships WHERE email=?').get(p.email);
-  if (m) { // take back exactly the time this payment added (later renewals keep their own time)
-    const delta = p.period_from && p.period_to ? new Date(p.period_to) - new Date(p.period_from) : null;
-    const left = delta != null ? new Date(new Date(m.expires_at) - delta) : addMonths(m.expires_at, -PLANS[p.plan].months);
-    db.prepare('UPDATE memberships SET expires_at=? WHERE email=?').run(left.toISOString(), p.email);
-  }
-});
-
-/** Never trust a redirect or a webhook body. Take only the payment id, fetch the real payment from Moyasar with the secret key,
- *  and compare status, amount, currency and our own cart id with what we recorded when checkout started. */
-async function reconcile(mzId, expectCart) {
-  if (!MZ_ID.test(String(mzId || ''))) return;
-  const q = await mzCall('GET', '/payments/' + encodeURIComponent(mzId));
-  const cart = cartOf(q);
-  if (!cart || !CART.test(cart) || (expectCart && cart !== expectCart)) { console.error('Moyasar payment not matched to a checkout:', q.id); return; }
-  const p = db.prepare('SELECT * FROM payments WHERE id=?').get(cart);
-  if (!p) return;
-  if (q.status === 'refunded') {
-    if (typeof q.refunded === 'number' && q.refunded < q.amount) return; // partial refunds do not end a membership
-    if (p.tran_ref === q.id) markRefunded(q.id, q.id);
-    return;
-  }
-  if (q.status === 'failed') { db.prepare("UPDATE payments SET status='failed' WHERE id=? AND status='pending'").run(p.id); return; }
-  if (q.status !== 'paid') return; // initiated (still in 3-D Secure), authorized, voided...: nothing to activate
-  if (q.currency !== p.currency || q.amount !== Math.round(p.amount * 100) || (p.tran_ref && p.tran_ref !== q.id)
-      || db.prepare('SELECT 1 FROM payments WHERE tran_ref=? AND id<>?').get(q.id, p.id)) {
-    console.error('Payment mismatch, not activated:', p.id, q.id); return;
-  }
-  settle(p, q.id);
-}
-
 /* ---------- app ---------- */
 const app = express();
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: { directives: {
   defaultSrc: ["'self'"],
   // 'unsafe-inline' is needed only because the prototype keeps its script inline. Move it to a file and remove this.
-  scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://accounts.google.com', 'https://appleid.cdn-apple.com', 'https://cdn.moyasar.com'],
-  styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com', 'https://cdn.moyasar.com'],
-  fontSrc: ['https://fonts.gstatic.com', 'https://*.moyasar.com'], imgSrc: ["'self'", 'data:', 'https://*.moyasar.com'],
-  frameSrc: ['https://accounts.google.com', 'https://appleid.apple.com', 'https://*.moyasar.com'], connectSrc: ["'self'", 'https://accounts.google.com', 'https://appleid.apple.com', 'https://api.moyasar.com'],
-  formAction: ["'self'", 'https://*.moyasar.com', 'https://appleid.apple.com'],
+  scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://accounts.google.com'],
+  styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
+  fontSrc: ['https://fonts.gstatic.com'], imgSrc: ["'self'", 'data:'],
+  frameSrc: ['https://accounts.google.com', 'https://appleid.apple.com'], connectSrc: ["'self'", 'https://accounts.google.com', 'https://appleid.apple.com'],
+  formAction: ["'self'", 'https://appleid.apple.com'],
   scriptSrcAttr: ["'unsafe-inline'"], // the page uses onclick="..." handlers; helmet's default ('none') would silently disable every button
   upgradeInsecureRequests: E.NODE_ENV === 'production' ? [] : null, // only meaningful on https; plain-http local testing must keep working
 }, },
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // Google and Apple sign-in talk to the page from a popup; the default 'same-origin' would cut that link
 } ));
 app.use(cookieParser());
-
-// Webhook first: no cookies and no CSRF header (Moyasar calls it). Set the same secret in the Moyasar dashboard webhook.
-const same = (a, b) => crypto.timingSafeEqual(crypto.createHash('sha256').update(String(a)).digest(), crypto.createHash('sha256').update(String(b)).digest());
-app.post('/api/moyasar/webhook', express.raw({ type: '*/*', limit: '200kb' }), async (req, res) => {
-  let ev;
-  try { ev = JSON.parse(req.body.toString('utf8')); } catch { return res.sendStatus(400); }
-  if (!ev || !same(ev.secret_token || '', MZ.hook)) return res.sendStatus(401);
-  if (typeof ev.live === 'boolean' && ev.live !== (MZ.mode === 'live')) return res.sendStatus(200); // an event from the other mode
-  try {
-    const eid = ev.id ? String(ev.id).slice(0, 80) : null;
-    if (eid && db.prepare('SELECT 1 FROM webhook_events WHERE id=?').get(eid)) return res.sendStatus(200); // already handled
-    if (/^payment_/.test(String(ev.type)) && ev.data && ev.data.id) await reconcile(ev.data.id); // only the id is used; the payment is re-fetched
-    if (eid) db.prepare('INSERT OR IGNORE INTO webhook_events(id,type,at) VALUES(?,?,?)').run(eid, String(ev.type).slice(0, 40), now());
-    res.sendStatus(200);
-  } catch (e) { console.error('webhook failed:', e.message); res.sendStatus(500); } // a non-2xx makes Moyasar retry
-});
-
-// The customer lands here after the card form (and 3-D Secure). Moyasar adds ?id=<payment id>. We verify it right away so
-// activation does not wait for the webhook, then show the status page. The redirect itself is never trusted.
-const returnLimit = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false });
-app.get('/payment/return/:cart', returnLimit, async (req, res) => {
-  const cart = CART.test(String(req.params.cart)) ? String(req.params.cart) : '';
-  if (cart) { try { await reconcile(req.query.id, cart); } catch (e) { console.error('return check failed:', e.message); } } // the webhook is the backup
-  res.redirect(303, '/?payment=' + encodeURIComponent(cart));
-});
 
 app.use(express.json({ limit: '50kb' }));
 app.use('/api/', rateLimit({ windowMs: 60_000, limit: Number(E.API_RATE_LIMIT) || 60, standardHeaders: true, legacyHeaders: false }));
@@ -255,8 +109,7 @@ function auth(req, res, next) {
     const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
     if (!u) throw new Error('no user');
     u.status = mstatus(email);
-    claimFounder(email); // signing in counts: whoever arrives while spots remain gets one, in order
-    if (u.status === 'suspended' && !/^\/api\/(me|notifications|appeals)(\/|\?|$)/.test(req.originalUrl)) return res.status(403).json({ error: 'Your account is suspended. Contact support for help.' });
+        if (u.status === 'suspended' && !/^\/api\/(me|notifications|appeals)(\/|\?|$)/.test(req.originalUrl)) return res.status(403).json({ error: 'Your account is suspended. Contact support for help.' });
     req.user = u; next();
   } catch { res.status(401).json({ error: 'Sign in required' }); }
 }
@@ -272,7 +125,6 @@ app.post('/api/auth/google', csrf, wrap(async (req, res) => {
   if (!p.email || !p.email_verified) return res.status(401).json({ error: 'Email not verified' });
   const email = p.email.toLowerCase();
   db.prepare("INSERT INTO users(email,name,provider,created_at) VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").run(email, p.name || '', 'google', now());
-  claimFounder(email);
   issue(res, email); res.json({ ok: true });
 }));
 app.post('/api/auth/logout', csrf, (req, res) => { res.clearCookie('rcg_session'); res.json({ ok: true }); });
@@ -303,24 +155,20 @@ app.post('/api/auth/apple', csrf, wrap(async (req, res) => {
     u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
     if (u && u.apple_sub && u.apple_sub !== sub) return res.status(409).json({ error: 'This email is linked to a different Apple account.' });
     if (u) db.prepare('UPDATE users SET apple_sub=? WHERE email=?').run(sub, email); // same verified email as an existing member: same person
-    else { db.prepare('INSERT INTO users(email,name,provider,apple_sub,created_at) VALUES(?,?,?,?,?)').run(email, name, 'apple', sub, now()); u = { email }; claimFounder(email); }
+    else { db.prepare('INSERT INTO users(email,name,provider,apple_sub,created_at) VALUES(?,?,?,?,?)').run(email, name, 'apple', sub, now()); u = { email }; }
   }
   if (name) db.prepare("UPDATE users SET name=? WHERE email=? AND (name IS NULL OR name='')").run(name, u.email);
   issue(res, u.email); res.json({ ok: true });
 }));
 
-const membership = email => {
-  const m = db.prepare('SELECT plan,expires_at FROM memberships WHERE email=?').get(email);
-  return m ? { ...m, active: new Date(m.expires_at) > new Date() } : { active: false };
-};
 app.get('/api/me', auth, (req, res) => res.json({
   email: req.user.email, name: req.user.name, isAdmin: admins.has(req.user.email),
-  profile: req.user.profile_json ? JSON.parse(req.user.profile_json) : null, membership: membership(req.user.email), verification: vstate(req.user.email), status: req.user.status, broker: binfo(req.user.email),
+  profile: req.user.profile_json ? JSON.parse(req.user.profile_json) : null, verification: vstate(req.user.email), status: req.user.status, broker: binfo(req.user.email),
   photo: (r => r ? { has: true, visible: !!r.visible } : { has: false, visible: false })(db.prepare('SELECT visible FROM photos WHERE email=?').get(req.user.email)),
   consent: !!req.user.consent_at, unread: unreadCount(req.user.email), warnings: activeWarnings(req.user.email), appeal: openAppeals(req.user.email),
 }));
 
-/* --- profile: payment unlocks only after a valid profile exists --- */
+/* --- profile --- */
 const s = (v, max) => String(v || '').trim().slice(0, max);
 app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, age = parseInt(b.a, 10);
@@ -334,56 +182,8 @@ app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/* --- checkout --- */
-app.post('/api/checkout', auth, csrf, wrap(async (req, res) => {
-  const plan = PLANS[req.body && req.body.plan];
-  if (!plan) return res.status(400).json({ error: 'Choose a plan' });
-  if (!req.user.profile_json) return res.status(409).json({ error: 'Create your profile before paying' });
-  if (plan.founder) {
-    if (!founderState(req.user.email).mine) return res.status(403).json({ error: 'Founder Membership is only for the first ' + FOUNDER_LIMIT + ' members who signed up.' });
-    if (db.prepare("SELECT 1 FROM payments WHERE email=? AND plan='founder' AND status='paid'").get(req.user.email)) return res.status(409).json({ error: 'You already have the Founder Membership. Choose another plan to renew.' });
-  }
-  const id = 'RC-' + crypto.randomUUID();
-  db.prepare('INSERT INTO payments(id,email,plan,amount,currency,status,created_at) VALUES(?,?,?,?,?,?,?)').run(id, req.user.email, req.body.plan, plan.price, CUR, 'pending', now());
-  // The card form runs in the browser with the publishable key. Everything the browser needs is returned here; the secret key is not.
-  res.json({
-    payment_id: id, amount: Math.round(plan.price * 100), currency: CUR, // Moyasar amounts are in halalas
-    description: 'Rishta Connect Global - ' + plan.name + ' [' + id + ']', metadata: { cart: id },
-    publishable_key: MZ.pk, callback_url: E.BASE_URL + '/payment/return/' + id,
-  });
-}));
-app.get('/api/payments/:id', auth, (req, res) => {
-  const p = db.prepare('SELECT id,plan,amount,currency,status FROM payments WHERE id=? AND email=?').get(req.params.id, req.user.email);
-  p ? res.json(p) : res.status(404).json({ error: 'Not found' });
-});
-
-/* --- admin: transactions and refunds --- */
-app.get('/api/admin/payments', auth, adminOnly, (req, res) =>
-  res.json(db.prepare('SELECT * FROM payments ORDER BY created_at DESC LIMIT 200').all()));
-
-app.post('/api/admin/payments/:id/refund', auth, adminOnly, csrf, wrap(async (req, res) => {
-  const reason = s(req.body && req.body.reason, 200);
-  if (reason.length < 3) return res.status(400).json({ error: 'Enter a refund reason' });
-  // Claim the payment atomically so two clicks can never refund twice.
-  const claim = db.prepare("UPDATE payments SET status='refunding' WHERE id=? AND status='paid'").run(req.params.id);
-  if (!claim.changes) return res.status(409).json({ error: 'Only paid payments can be refunded' });
-  const p = db.prepare('SELECT * FROM payments WHERE id=?').get(req.params.id);
-  try {
-    if (!MZ_ID.test(String(p.tran_ref || ''))) throw new Error('This payment has no Moyasar payment id');
-    const r = await mzCall('POST', '/payments/' + encodeURIComponent(p.tran_ref) + '/refund'); // full refund: no body
-    if (r.status !== 'refunded') throw new Error('Moyasar did not confirm the refund (status: ' + r.status + ')');
-  } catch (e) {
-    db.prepare("UPDATE payments SET status='paid' WHERE id=? AND status='refunding'").run(p.id); // nothing was refunded: release the claim
-    return res.status(502).json({ error: 'Refund failed: ' + e.message });
-  }
-  // Money is refunded. If the line below ever failed the payment stays 'refunding' (never back to 'paid') and Moyasar's refund webhook finishes it.
-  markRefunded(p.tran_ref, p.tran_ref);
-  audit(req.user.email, 'refund', p.id, reason);
-  res.json({ ok: true });
-}));
-
 /* --- public config (the Google client id is public by design) --- */
-app.get('/api/config', (req, res) => res.json({ paymentMode: MZ.mode, googleClientId: E.GOOGLE_CLIENT_ID, appleClientId: E.APPLE_CLIENT_ID || null, appleRedirectUri: E.APPLE_REDIRECT_URI || null, baseUrl: E.BASE_URL.replace(/\/+$/, ''), googleOk: /\.apps\.googleusercontent\.com$/.test(E.GOOGLE_CLIENT_ID), supportEmail: E.SUPPORT_EMAIL || null, businessName: E.BUSINESS_NAME || 'Rishta Connect Global' }));
+app.get('/api/config', (req, res) => res.json({ googleClientId: E.GOOGLE_CLIENT_ID, appleClientId: E.APPLE_CLIENT_ID || null, appleRedirectUri: E.APPLE_REDIRECT_URI || null, baseUrl: E.BASE_URL.replace(/\/+$/, ''), googleOk: /\.apps\.googleusercontent\.com$/.test(E.GOOGLE_CLIENT_ID), supportEmail: E.SUPPORT_EMAIL || null, businessName: E.BUSINESS_NAME || 'Rishta Connect Global' }));
 
 /* --- verification helpers --- */
 const CHECKS = { identity: 'identity', photo: 'photo', background: 'background' }; // whitelist: only these column names reach SQL
@@ -400,14 +200,14 @@ const opaque = email => { // members never see each other's email; the id is rem
 const byUid = uid => { const r = db.prepare('SELECT email FROM uid_map WHERE uid=?').get(String(uid || '')); return r && r.email; };
 const audit = (admin, action, ref, reason) => db.prepare('INSERT INTO audit(admin,action,payment_id,reason,at) VALUES(?,?,?,?,?)').run(admin, action, ref, reason || null, now());
 
-/* --- member search: only members with an active paid membership may browse --- */
+/* --- member search: members with an approved profile may browse --- */
 const PAGE = 12;
 app.get('/api/members', auth, wrap(async (req, res) => {
-  if (!membership(req.user.email).active) return res.status(403).json({ error: 'Activate your profile with a membership to search members.' });
+  if (!req.user.profile_json) return res.status(403).json({ error: 'Create your profile to search members.' });
   if (mstatus(req.user.email) !== 'approved') return res.status(403).json({ error: 'Your profile is awaiting approval.' });
   const q = req.query, lo = parseInt(q.lo, 10) || 18, hi = parseInt(q.hi, 10) || 70, like = k => String(q[k] || '').toLowerCase().slice(0, 40);
   const city = like('c'), edu = like('e'), job = like('j'), page = Math.max(1, parseInt(q.page, 10) || 1);
-  const rows = db.prepare('SELECT u.email,u.profile_json FROM users u JOIN memberships m ON m.email=u.email WHERE m.expires_at>? AND u.profile_json IS NOT NULL AND u.email<>? ORDER BY u.created_at DESC').all(now(), req.user.email);
+  const rows = db.prepare('SELECT u.email,u.profile_json FROM users u WHERE u.profile_json IS NOT NULL AND u.email<>? ORDER BY u.created_at DESC').all(req.user.email);
   const hit = rows.map(r => ({ email: r.email, p: JSON.parse(r.profile_json) }))
     .filter(({ email }) => mstatus(email) === 'approved' && !isBlocked(req.user.email, email))
     .filter(({ p }) => (!q.g || p.g === q.g) && (!q.m || p.m === q.m) && p.a >= lo && p.a <= hi && (!city || p.c.toLowerCase().includes(city)) && (!edu || p.e.toLowerCase().includes(edu)) && (!job || p.j.toLowerCase().includes(job)))
@@ -468,7 +268,7 @@ app.get('/api/admin/members', auth, adminOnly, (req, res) => {
   const rows = db.prepare('SELECT email,name FROM users WHERE profile_json IS NOT NULL ORDER BY created_at DESC').all();
   res.json(rows.map(u => {
     const r = db.prepare('SELECT status,reason FROM member_status WHERE email=?').get(u.email);
-    return { email: u.email, name: u.name, status: r ? r.status : 'approved', reason: r ? r.reason : null, membership: membership(u.email) };
+    return { email: u.email, name: u.name, status: r ? r.status : 'approved', reason: r ? r.reason : null };
   }));
 });
 app.post('/api/admin/members/:email/suspend', auth, adminOnly, csrf, wrap(async (req, res) => {
@@ -568,10 +368,10 @@ function gate(from, to, exists) {
   if (tb === 'suspended') return 'This broker is unavailable';
   if (fb === 'approved') return exists ? null : 'Brokers reply to clients; they cannot start conversations';
   if (tb === 'approved') return fu && fu.profile_json ? null : 'Create your profile before contacting a broker';
-  // member to member: both sides need an approved profile and a paid, active membership
-  if (!membership(from).active) return 'Activate your profile with a membership to message members';
+  // member to member: both sides need an approved profile
+  if (!fu.profile_json) return 'Create your profile to message members';
   if (mstatus(from) !== 'approved') return 'Your profile is awaiting approval';
-  if (!tu.profile_json || mstatus(to) !== 'approved' || !membership(to).active) return 'This member is unavailable';
+  if (!tu.profile_json || mstatus(to) !== 'approved') return 'This member is unavailable';
   return null;
 }
 const convFor = (id, email) => { const c = db.prepare('SELECT * FROM conversations WHERE id=?').get(id); return c && (c.u1 === email || c.u2 === email) ? c : null; }; // participants only
@@ -874,7 +674,7 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
 }));
 
 require('./reviews')({ app, db, jwt, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, mstatus, bstatus, isBlocked, s });
-require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, membership, mstatus, vstate, isBlocked, whoIs, PLANS, CUR, admins, founderState, viewerEmail });
+require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, whoIs, admins });
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
 const IMG_DIR = path.join(__dirname, 'public', 'img');
