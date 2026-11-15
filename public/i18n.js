@@ -441,6 +441,7 @@
     "Too many appeals. Try again later.": ["بہت زیادہ اپیلیں۔ بعد میں کوشش کریں۔","اعتراضات كثيرة جدًا. حاول لاحقًا."],
     "Too many photo uploads. Try again later.": ["تصاویر بہت زیادہ اپ لوڈ ہوئیں۔ بعد میں کوشش کریں۔","عمليات رفع صور كثيرة جدًا. حاول لاحقًا."],
     "Too many reports. Try again later.": ["بہت زیادہ رپورٹس۔ بعد میں کوشش کریں۔","بلاغات كثيرة جدًا. حاول لاحقًا."],
+    "Type DELETE (capital letters) to confirm.": ["تصدیق کے لیے بڑے حروف میں DELETE لکھیں۔","اكتب DELETE بأحرف كبيرة للتأكيد."],
     "Type DELETE to confirm.": ["تصدیق کے لیے DELETE لکھیں۔","اكتب DELETE للتأكيد."],
     "Unknown appeal type": ["اپیل کی نامعلوم قسم","نوع اعتراض غير معروفة"],
     "Unknown check": ["نامعلوم جانچ","فحص غير معروف"],
