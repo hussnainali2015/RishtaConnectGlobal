@@ -180,15 +180,15 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
     db.transaction(() => {
       const cids = db.prepare('SELECT id FROM conversations WHERE u1=? OR u2=?').all(em, em).map(r => r.id);
       for (const id of cids) { db.prepare('DELETE FROM messages WHERE conv_id=?').run(id); db.prepare('DELETE FROM conv_reads WHERE conv_id=?').run(id); db.prepare('DELETE FROM conversations WHERE id=?').run(id); }
-      for (const [t, col] of [['photos', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em);
-      db.prepare('DELETE FROM review_flags WHERE review_id NOT IN (SELECT id FROM broker_reviews)').run();
+      for (const [t, col] of [['photos', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) { if (db.prepare('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(t)) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em); }
+      if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='review_flags'").get()) db.prepare('DELETE FROM review_flags WHERE review_id NOT IN (SELECT id FROM broker_reviews)').run();
       for (const t of ['memberships', 'payments']) if (db.prepare('SELECT 1 FROM sqlite_master WHERE name=?').get(t)) // left over from before the site became free: old records are removed or made anonymous
         t === 'memberships' ? db.prepare('DELETE FROM memberships WHERE email=?').run(em) : db.prepare('UPDATE payments SET email=? WHERE email=?').run(g, em);
       db.prepare('UPDATE reports SET reporter=? WHERE reporter=?').run(g, em);
       db.prepare('DELETE FROM users WHERE email=?').run(em);
       audit('self', 'account-deleted', g, 'member deleted own account');
     })();
-    res.clearCookie('rcg_session');
+    res.clearCookie('rcg_session', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
     res.json({ ok: true });
   }));
 
