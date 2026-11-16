@@ -122,7 +122,7 @@ footer img{width:46px;height:46px;border-radius:12px;display:block;margin:0 auto
 /* ----- navigation: bottom tab bar on phones, a quiet bar under the header on larger screens ----- */
 #dock{position:fixed;z-index:14;inset-inline:0;bottom:0;background:#fffaf2;border-top:1px solid var(--ln);box-shadow:0 -8px 24px -14px rgba(79,10,31,.4);padding-bottom:env(safe-area-inset-bottom,0px)}
 #dock .bar{display:flex;justify-content:space-around;gap:0;padding:4px 6px 2px;overflow-x:auto;scrollbar-width:none}#dock .bar::-webkit-scrollbar{display:none}
-#dock a{flex:1 0 auto;display:grid;justify-items:center;gap:2px;min-width:56px;padding:7px 6px 5px;color:var(--mu);font-size:11px;font-weight:600;cursor:pointer;position:relative;border-radius:12px}
+#dock a{flex:1 0 auto;display:grid;justify-items:center;gap:2px;min-width:48px;padding:7px 4px 5px;color:var(--mu);font-size:11px;font-weight:600;cursor:pointer;position:relative;border-radius:12px}
 #dock a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 #dock a.on{color:var(--mr)}#dock a.on::before{content:"";position:absolute;top:0;width:26px;height:3px;border-radius:2px;background:var(--gd)}
 #dock a .n{position:absolute;top:2px;inset-inline-end:10px;background:var(--mr);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;line-height:15px}
@@ -245,7 +245,7 @@ const IC={home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',sea
 const GR={shortlist:'search',member:'search',broker:'brokers',chat:'msgs',settings:'profile',edit:'profile'};
 function nav(){const cur=GR[V]||V,item=(k,label,badge)=>`<a class="${cur==k?'on':''}" onclick="go('${k}')" role="link" aria-label="${label}"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg><span>${label}</span>${badge?`<i class="n">${badge}</i>`:''}</a>`;
   $('#nav').innerHTML=`<div class="logo" onclick="go('home')">${LOGO}<b data-notr>Rishta <i>Connect</i> Global</b></div><div class="ctl">`+
-  (me?`<button class="orb" onclick="go('settings')" aria-label="Settings" title="Settings">⚙</button>`:'')+
+  (me&&me.isAdmin?`<button class="orb" onclick="go('admin')" aria-label="Admin" title="Admin" style="font-size:12px;font-weight:700;color:var(--mr)">Admin</button>`:'')+(me?`<button class="orb" onclick="go('settings')" aria-label="Settings" title="Settings">⚙</button>`:'')+
   `<select class="lang" aria-label="Language" onchange="setLang(this.value)">${[['en','English'],['ur','اردو'],['ar','العربية']].map(([c,n])=>`<option value="${c}" ${lang==c?'selected':''}>${n}</option>`).join('')}</select>`+
   (me?`<button class="btn ol s" onclick="logout()">${t('out')}</button>`:`<button class="btn s" onclick="login()">${t('login')}</button>`)+`</div>`;
  $('#dock').innerHTML=`<div class="bar">`+['home','search','brokers','msgs','profile'].map(k=>item(k,t(k))).join('')+(me?item('notifs','Alerts',me.unread||0):'')+(me&&me.broker?item('apply','Broker account'):'')+(me&&me.isAdmin?item('admin','Admin'):'')+`</div>`}
