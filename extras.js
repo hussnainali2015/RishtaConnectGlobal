@@ -50,7 +50,9 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
   /* ---- health, robots, legal ---- */
   app.get('/healthz', (req, res) => { try { db.prepare('SELECT 1').get(); res.json({ ok: true }); } catch { res.status(503).json({ ok: false }); } });
   app.get('/robots.txt', (req, res) => { res.type('text/plain'); res.send('User-agent: *\nDisallow: /api/\n'); });
-  for (const p of ['terms', 'privacy', 'safety', 'contact']) app.get('/' + p, (req, res) => res.type('html').send(legal[p](cfg)));
+  for (const p of ['terms', 'privacy', 'safety', 'contact', 'faq']) app.get('/' + p, (req, res) => res.type('html').send(legal[p](cfg)));
+  // the same answers as JSON: the in-app assistant uses them for instant replies (no AI needed)
+  app.get('/api/faq', (req, res) => { res.set('Cache-Control', 'public, max-age=300'); res.json(legal.kb(cfg).map(({ id, cat, k, q, a }) => ({ id, cat, k, q, a }))); });
 
   /* ---- member detail and shortlist ---- */
   const needActive = (req, res) => {
