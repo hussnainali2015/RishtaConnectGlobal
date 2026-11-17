@@ -6,7 +6,7 @@
  * then set LEGAL_REVIEWED=true in .env (until then each page shows a draft notice).
  */
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const UPDATED = '9 November 2026';
+const UPDATED = '17 November 2026';
 
 function shell(cfg, title, body) {
   const draft = cfg.reviewed ? '' : '<div class="draft">Draft text: this page has not yet been reviewed by a lawyer. The site owner must review it before launch.</div>';
@@ -22,7 +22,7 @@ p,li{color:var(--ink)}.mu{color:var(--mu);font-size:14px}ul{padding-inline-start
 .draft{background:#f4e7c8;color:#5b3d06;border-radius:10px;padding:10px 14px;margin:12px 0}
 nav.f{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;padding:18px;border-top:1px solid var(--ln);font-size:14px}
 </style></head><body><header><a href="/">${esc(cfg.name)}</a></header><main>${draft}<h1>${esc(title)}</h1><p class="mu">Last updated ${UPDATED}</p>${body}</main>
-<nav class="f"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/safety">Safety tips</a><a href="/contact">Contact</a></nav></body></html>`;
+<nav class="f"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/safety">Safety tips</a><a href="/faq">Help &amp; FAQ</a><a href="/contact">Contact</a></nav></body></html>`;
 }
 
 const mail = cfg => cfg.email ? `<a href="mailto:${esc(cfg.email)}">${esc(cfg.email)}</a>` : 'the contact details on our Contact page';
@@ -93,7 +93,7 @@ function safety(c) {
 <h2>Never send money</h2><p>Do not send money, gift cards or bank or card details to anyone you have not met in person with your family, whatever the reason. Requests for help with a visa, an emergency, a ticket, or an "investment" are the most common scams. <b>Report them.</b></p>
 <h2>When you meet</h2><ul><li>Meet in a public place, in daylight, with a family member present or close by.</li><li>Tell someone where you are going.</li><li>Arrange your own transport.</li></ul>
 <h2>Warning signs</h2><ul><li>Pressure to move off the site, or to decide quickly.</li><li>A profile that seems too perfect, or photos that look like a model's.</li><li>Refusing to talk on a call or meet.</li><li>Talk of money, gold, or "customs fees".</li></ul>
-<h2>Use the tools</h2><p>You can <b>block</b> or <b>report</b> any member or broker from search results, a broker page, or inside a chat. Reports are reviewed by our team. The person is not told who reported them.</p>
+<h2>Use the tools</h2><p>You can <b>report</b> a member or broker from search results, a broker page, or inside a chat, and <b>block</b> someone from inside the chat with them. Reports are reviewed by our team. The person is not told who reported them.</p>
 <p>If you are in danger, contact your local emergency services first.</p>`);
 }
 
@@ -105,4 +105,141 @@ function contact(c) {
 <p class="mu">Operated by ${esc(c.name)}.</p>`);
 }
 
-module.exports = { terms, privacy, safety, contact };
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * Help knowledge base: ONE list used by (1) the /faq page, (2) /api/faq, which feeds the instant answers in the in-app assistant,
+ * and (3) the AI assistant's instructions. Edit an answer here and all three change together.
+ * k = words a member might type (English, Urdu, Roman Urdu, Arabic) used to find the entry.
+ * Keep every statement true to what the software really does.
+ * ------------------------------------------------------------------------------------------------------------------------- */
+function kb(c) {
+  const sup = c.email || 'our support team (see the Contact page)';
+  return [
+  { id: 'what', cat: 'Getting started', k: ['what is', 'about', 'how it works', 'how does the site', 'kya hai', 'کیا ہے', 'یہ سائٹ', 'ما هو', 'عن الموقع'],
+    q: { en: 'What is Rishta Connect Global and how does it work?', ur: 'رشتہ کنیکٹ گلوبل کیا ہے اور کیسے کام کرتا ہے؟' },
+    a: { en: 'It is a free matrimonial website for families around the world. You sign in with Google, create a profile, and our team checks it before it goes live. Approved members can search, shortlist, and message each other privately. You can also contact approved brokers, who have ratings and reviews. The site is available in English, Urdu and Arabic.',
+         ur: 'یہ دنیا بھر کے خاندانوں کے لیے مفت رشتہ ویب سائٹ ہے۔ آپ گوگل سے لاگ اِن کر کے پروفائل بناتے ہیں، اور لائیو ہونے سے پہلے ہماری ٹیم اسے جانچتی ہے۔ منظور شدہ ممبرز تلاش، شارٹ لسٹ اور نجی پیغام کر سکتے ہیں۔ آپ ریٹنگ اور رائے والے منظور شدہ بروکرز سے بھی رابطہ کر سکتے ہیں۔ سائٹ انگریزی، اردو اور عربی میں ہے۔' } },
+  { id: 'register', cat: 'Getting started', k: ['register', 'sign up', 'signup', 'create account', 'join', 'رجسٹر', 'سائن اپ', 'اکاؤنٹ بنا', 'تسجيل', 'حساب جديد'],
+    q: { en: 'How do I register?', ur: 'میں رجسٹر کیسے ہوں؟' },
+    a: { en: 'Tap Login or Get started, then Continue with Google. After signing in, open My profile, fill in every field, accept the Terms and Privacy Policy, and press Save. Your profile then waits for our team to approve it. Only people aged 18 or over may register.',
+         ur: 'Login یا Get started دبائیں، پھر Continue with Google۔ لاگ اِن کے بعد My profile کھولیں، تمام خانے بھریں، شرائط اور پرائیویسی پالیسی قبول کریں اور Save دبائیں۔ پھر آپ کی پروفائل ہماری ٹیم کی منظوری کا انتظار کرتی ہے۔ صرف 18 سال یا اس سے زیادہ عمر کے لوگ رجسٹر ہو سکتے ہیں۔' } },
+  { id: 'free', cat: 'Getting started', k: ['free', 'cost', 'price', 'pay', 'payment', 'fee', 'charge', 'subscription', 'card', 'مفت', 'قیمت', 'فیس', 'ادائیگی', 'مجاني', 'دفع', 'رسوم'],
+    q: { en: 'Is it really free? Do I need to pay anything?', ur: 'کیا یہ واقعی مفت ہے؟ کیا کچھ ادا کرنا ہوگا؟' },
+    a: { en: 'Yes, it is free. Registering, searching, shortlisting and messaging cost nothing, and we never ask for a card number or any payment. If anyone, including someone using our name, asks you for money, do not pay and use the Report button.',
+         ur: 'جی ہاں، یہ مفت ہے۔ رجسٹریشن، تلاش، شارٹ لسٹ اور پیغامات پر کوئی خرچ نہیں، اور ہم کبھی کارڈ نمبر یا کوئی ادائیگی نہیں مانگتے۔ اگر کوئی بھی، ہمارا نام لے کر بھی، پیسے مانگے تو ادا نہ کریں اور Report کا بٹن استعمال کریں۔' } },
+  { id: 'login', cat: 'Getting started', k: ['sign in', 'login', 'log in', 'google', 'cannot login', "can't log", 'لاگ', 'سائن ان', 'گوگل', 'دخول', 'تسجيل الدخول'],
+    q: { en: 'I cannot sign in. What should I do?', ur: 'میں لاگ اِن نہیں ہو پا رہا۔ کیا کروں؟' },
+    a: { en: 'Tap Login, then Continue with Google. If nothing happens: allow cookies and pop-ups, open the site in Safari or Chrome (not inside another app\'s browser), and make sure you pick the same Google account each time. The sign-in stays active for up to 7 days.',
+         ur: 'Login دبائیں، پھر Continue with Google۔ اگر کچھ نہ ہو تو کوکیز اور پاپ اپ کی اجازت دیں، سائٹ کو Safari یا Chrome میں کھولیں (کسی دوسری ایپ کے اندرونی براؤزر میں نہیں)، اور ہر بار وہی گوگل اکاؤنٹ چنیں۔ لاگ اِن زیادہ سے زیادہ 7 دن تک قائم رہتا ہے۔' } },
+  { id: 'password', cat: 'Getting started', k: ['password', 'forgot', 'reset', 'پاس ورڈ', 'كلمة المرور'],
+    q: { en: 'I forgot my password.', ur: 'میں پاس ورڈ بھول گیا/گئی ہوں۔' },
+    a: { en: 'This site has no passwords. You sign in with your Google account, so if you need to change or recover a password, do it with Google.',
+         ur: 'اس سائٹ پر پاس ورڈ نہیں ہوتے۔ آپ گوگل اکاؤنٹ سے لاگ اِن کرتے ہیں، اس لیے پاس ورڈ بدلنا یا واپس لینا ہو تو گوگل سے کریں۔' } },
+  { id: 'fields', cat: 'Your profile', k: ['fields', 'profile fields', 'age limit', 'required', 'what to write', 'complete every field', 'عمر', 'خانے', 'لازمی', 'الحقول'],
+    q: { en: 'What do I have to fill in on my profile?', ur: 'پروفائل میں کیا بھرنا ضروری ہے؟' },
+    a: { en: 'Every field is required: name, gender, age (18 to 70), city, marital status (never married, divorced or widowed), education, occupation, an About text (up to 400 characters) and a Looking for text (up to 300 characters). Do not put phone numbers, emails, links or social media names in these texts; the automatic check flags them.',
+         ur: 'تمام خانے لازمی ہیں: نام، جنس، عمر (18 سے 70)، شہر، ازدواجی حیثیت (غیر شادی شدہ، طلاق یافتہ یا بیوہ/رنڈوا)، تعلیم، پیشہ، About (400 حروف تک) اور Looking for (300 حروف تک)۔ ان تحریروں میں فون نمبر، ای میل، لنک یا سوشل میڈیا نام نہ لکھیں، خودکار جانچ انہیں نشان زد کرتی ہے۔' } },
+  { id: 'status', cat: 'Your profile', k: ['not showing', 'not live', 'approval', 'approve', 'approved', 'pending', 'waiting', 'visible', 'appear', 'how long', 'نظر نہیں', 'منظور', 'ظاہر', 'لائیو', 'انتظار', 'لا يظهر', 'موافقة', 'معلق'],
+    q: { en: 'My profile is not showing. Why is it still waiting?', ur: 'میری پروفائل نظر نہیں آ رہی، ابھی تک انتظار میں کیوں ہے؟' },
+    a: { en: 'New profiles are hidden until our team approves them, and this applies to everyone. Our team reviews them as soon as possible and you will get a notification in Alerts when it is live. A profile can also be held for a second look if the automatic check flags something, or sent back to you with a reason if something must be fixed. In that case, correct it in My profile and press Save to send it again.',
+         ur: 'نئی پروفائلز ہماری ٹیم کی منظوری تک پوشیدہ رہتی ہیں، اور یہ ہر ایک کے لیے ہے۔ ٹیم جلد از جلد دیکھتی ہے اور لائیو ہونے پر Alerts میں اطلاع ملے گی۔ خودکار جانچ کسی چیز کو نشان زد کرے تو پروفائل دوبارہ دیکھنے کے لیے روکی جا سکتی ہے، یا وجہ کے ساتھ واپس بھیجی جا سکتی ہے۔ ایسے میں My profile میں درستی کر کے Save دبائیں تاکہ دوبارہ جائے۔' } },
+  { id: 'edit', cat: 'Your profile', k: ['edit', 'change profile', 'update profile', 'change my', 'پروفائل بدل', 'ایڈٹ', 'تبدیل', 'تعديل'],
+    q: { en: 'How do I edit my profile?', ur: 'پروفائل میں تبدیلی کیسے کروں؟' },
+    a: { en: 'Open My profile and press Edit profile, change what you need and Save. After a change our team may look at your profile again. Changing your photo also means the photo must be checked again.',
+         ur: 'My profile کھولیں اور Edit profile دبائیں، تبدیلی کر کے Save کریں۔ تبدیلی کے بعد ہماری ٹیم پروفائل دوبارہ دیکھ سکتی ہے۔ تصویر بدلنے پر تصویر کی جانچ بھی دوبارہ ہوتی ہے۔' } },
+  { id: 'photo', cat: 'Your profile', k: ['photo', 'picture', 'image', 'upload', 'jpeg', 'jpg', 'hide photo', 'show photo', 'تصویر', 'فوٹو', 'صورة'],
+    q: { en: 'How do I add or hide my photo?', ur: 'تصویر کیسے لگاؤں یا چھپاؤں؟' },
+    a: { en: 'Open My profile, then Settings and photo. Upload a clear JPEG of yourself (up to about 1.2 MB, at least 64 pixels wide). The site cleans the file and removes hidden data such as location. Your photo stays hidden from everyone until you choose to show it to members, and you can hide or remove it at any time. Photos are checked by our team, and unsuitable photos are kept hidden.',
+         ur: 'My profile ← Settings and photo میں اپنی صاف JPEG تصویر اپ لوڈ کریں (تقریباً 1.2 MB تک، کم از کم 64 پکسل چوڑی)۔ سائٹ فائل کو صاف کرتی ہے اور لوکیشن جیسا چھپا ہوا ڈیٹا ہٹا دیتی ہے۔ جب تک آپ خود ممبرز کو دکھانے کا انتخاب نہ کریں تصویر سب سے پوشیدہ رہتی ہے، اور آپ کسی بھی وقت اسے چھپا یا ہٹا سکتے ہیں۔ تصاویر ہماری ٹیم دیکھتی ہے، اور نامناسب تصاویر پوشیدہ رکھی جاتی ہیں۔' } },
+  { id: 'verified', cat: 'Your profile', k: ['verified', 'verification', 'badge', 'tick', 'تصدیق', 'ویریفائی', 'ویریفائیڈ', 'موثق'],
+    q: { en: 'What does the Verified badge mean?', ur: 'ویریفائیڈ بیج کا کیا مطلب ہے؟' },
+    a: { en: 'Verified means our team has checked three things: identity, photo and background. Only our team can give it, and it cannot be bought. Verified members are listed first in search. A new photo needs to be checked again.',
+         ur: 'ویریفائیڈ کا مطلب ہے کہ ہماری ٹیم نے تین چیزیں جانچ لی ہیں: شناخت، تصویر اور پس منظر۔ یہ صرف ہماری ٹیم دے سکتی ہے اور خریدا نہیں جا سکتا۔ تلاش میں ویریفائیڈ ممبرز پہلے آتے ہیں۔ نئی تصویر کی جانچ دوبارہ ہوتی ہے۔' } },
+  { id: 'featured', cat: 'Your profile', k: ['featured', 'homepage', 'home page', 'sample', 'نمایاں', 'ہوم پیج', 'نمونہ', 'مميزة'],
+    q: { en: 'What are Featured profiles and Sample profiles?', ur: 'نمایاں پروفائلز اور نمونہ پروفائلز کیا ہیں؟' },
+    a: { en: 'Featured profiles on the home page show only members who ticked the Featured box in their profile and who are approved and verified. Only the first name, age, city and occupation are shown. Sample profiles are clearly labelled examples with illustrated pictures, shown only until real members join. They are not real people and cannot be contacted.',
+         ur: 'ہوم پیج کے نمایاں پروفائلز میں صرف وہ ممبرز آتے ہیں جنہوں نے پروفائل میں Featured کا خانہ ٹک کیا ہو اور جو منظور شدہ اور ویریفائیڈ ہوں۔ صرف پہلا نام، عمر، شہر اور پیشہ دکھایا جاتا ہے۔ نمونہ پروفائلز واضح لیبل والی مثالیں ہیں جن کی تصاویر خاکے ہیں، اور صرف حقیقی ممبرز کے آنے تک دکھائی جاتی ہیں۔ یہ حقیقی لوگ نہیں اور ان سے رابطہ نہیں ہو سکتا۔' } },
+  { id: 'search', cat: 'Using the site', k: ['search', 'find', 'filter', 'cannot see', "can't see", 'not found', 'تلاش', 'ڈھونڈ', 'فلٹر', 'بحث'],
+    q: { en: 'How do I search, and why can I not see someone?', ur: 'تلاش کیسے کروں، اور کوئی ممبر نظر کیوں نہیں آتا؟' },
+    a: { en: 'Open Search (you need an approved profile). You can filter by gender, marital status, age range, city, education and occupation. Results show 12 per page, with verified members first. You will not see members who are not approved yet, have been suspended or deleted, or who have blocked you (or whom you blocked).',
+         ur: 'Search کھولیں (اس کے لیے آپ کی پروفائل منظور شدہ ہونی چاہیے)۔ آپ جنس، ازدواجی حیثیت، عمر کی حد، شہر، تعلیم اور پیشے سے فلٹر کر سکتے ہیں۔ ایک صفحے پر 12 نتائج آتے ہیں اور ویریفائیڈ ممبرز پہلے۔ وہ ممبرز نظر نہیں آتے جو ابھی منظور نہیں ہوئے، معطل یا ڈیلیٹ ہو چکے ہوں، یا جنہوں نے آپ کو بلاک کیا ہو (یا آپ نے انہیں)۔' } },
+  { id: 'shortlist', cat: 'Using the site', k: ['shortlist', 'save', 'favourite', 'favorite', 'bookmark', 'شارٹ لسٹ', 'محفوظ کر', 'مفضلة'],
+    q: { en: 'How does the shortlist work?', ur: 'شارٹ لسٹ کیسے کام کرتی ہے؟' },
+    a: { en: 'Tap the star (☆) on a member in Search to save them. You can keep up to 200 members and see them with the My shortlist button at the top of Search. The member is not told. Members who become unavailable disappear from your list.',
+         ur: 'کسی تلاش میں کسی ممبر پر ستارے (☆) کو دبا کر اسے محفوظ کریں۔ آپ زیادہ سے زیادہ 200 ممبرز رکھ سکتے ہیں اور انہیں Search کے اوپر My shortlist کے بٹن سے دیکھ سکتے ہیں۔ ممبر کو اس کی اطلاع نہیں ہوتی۔ جو ممبر دستیاب نہ رہے وہ آپ کی فہرست سے ہٹ جاتا ہے۔' } },
+  { id: 'chat', cat: 'Using the site', k: ['chat', 'message', 'contact a member', 'talk', 'send message', 'request', 'پیغام', 'چیٹ', 'بات', 'رابطہ', 'محادثة', 'رسالة'],
+    q: { en: 'How does messaging work? Do I need to send a request first?', ur: 'پیغام رسانی کیسے کام کرتی ہے؟ کیا پہلے درخواست بھیجنی ہوگی؟' },
+    a: { en: 'There is no request or approval step. Tap Send message on a member card in Search and write your first message, and that opens the chat. Find your chats in the Messages tab. Both of you need an approved profile. You can send up to 20 messages a minute. If a member is blocked, suspended or removed, you will just see "This member is unavailable".',
+         ur: 'درخواست یا منظوری کا کوئی مرحلہ نہیں۔ تلاش میں کسی ممبر کے کارڈ پر Send message دبا کر پہلا پیغام لکھیں، چیٹ فوراً کھل جاتی ہے، اور آپ کی چیٹس Messages ٹیب میں ہوتی ہیں۔ دونوں کی پروفائل منظور شدہ ہونی چاہیے۔ آپ ایک منٹ میں 20 پیغامات تک بھیج سکتے ہیں۔ اگر ممبر بلاک، معطل یا ہٹا دیا گیا ہو تو آپ کو صرف "This member is unavailable" نظر آئے گا۔' } },
+  { id: 'brokers', cat: 'Brokers', k: ['broker', 'brokers', 'agent', 'matchmaker', 'بروکر', 'وسيط', 'رشتہ کرانے'],
+    q: { en: 'What are brokers and how do I contact one?', ur: 'بروکرز کیا ہیں اور ان سے رابطہ کیسے کروں؟' },
+    a: { en: 'Brokers are matchmakers approved by our team. Open the Brokers tab to see them with their ratings and reviews. Once you have a profile you can message a broker. Brokers can only reply to people who contacted them; they cannot start a conversation themselves.',
+         ur: 'بروکرز ہماری ٹیم کے منظور کردہ رشتہ کرانے والے ہیں۔ Brokers ٹیب میں ان کی ریٹنگ اور رائے کے ساتھ دیکھیں۔ پروفائل بنانے کے بعد آپ بروکر کو پیغام کر سکتے ہیں۔ بروکر صرف انہی کو جواب دیتے ہیں جنہوں نے رابطہ کیا ہو، خود گفتگو شروع نہیں کر سکتے۔' } },
+  { id: 'review', cat: 'Brokers', k: ['review', 'rating', 'rate a broker', 'stars', 'ریٹنگ', 'رائے', 'ریویو', 'تقييم'],
+    q: { en: 'How do I rate or review a broker?', ur: 'بروکر کو ریٹنگ یا رائے کیسے دوں؟' },
+    a: { en: 'Open the broker\'s page and give 1 to 5 stars with a short comment. You need a profile and an actual connection with that broker. A rating of 1 or 2 stars needs an explanation of at least 10 characters. Do not write links, emails or phone numbers in a review. Reviews you think are unfair or false can be flagged for our team.',
+         ur: 'بروکر کا صفحہ کھول کر 1 سے 5 ستارے اور مختصر رائے دیں۔ اس کے لیے آپ کی پروفائل اور اس بروکر سے اصل رابطہ ہونا ضروری ہے۔ 1 یا 2 ستاروں کی ریٹنگ کے ساتھ کم از کم 10 حروف کی وضاحت لازمی ہے۔ رائے میں لنک، ای میل یا فون نمبر نہ لکھیں۔ جو رائے آپ کو غلط یا جھوٹی لگے اسے ہماری ٹیم کے لیے نشان زد کیا جا سکتا ہے۔' } },
+  { id: 'become-broker', cat: 'Brokers', k: ['become a broker', 'apply broker', 'broker account', 'broker application', 'بروکر بن', 'بروکر اکاؤنٹ'],
+    q: { en: 'How do I become a broker?', ur: 'میں بروکر کیسے بنوں؟' },
+    a: { en: 'Sign in, then use the Become a broker option and fill in your name, city, experience, languages, services and a short description. Our team reviews every application, and you can use broker features once it is approved. Approved brokers cannot start chats, cannot review other brokers, and can be suspended for misuse.',
+         ur: 'لاگ اِن کر کے Become a broker کا آپشن استعمال کریں اور نام، شہر، تجربہ، زبانیں، خدمات اور مختصر تعارف بھریں۔ ہماری ٹیم ہر درخواست دیکھتی ہے، اور منظوری کے بعد آپ بروکر کی سہولتیں استعمال کر سکتے ہیں۔ منظور شدہ بروکر گفتگو شروع نہیں کر سکتے، دوسرے بروکرز کو ریویو نہیں دے سکتے، اور غلط استعمال پر معطل ہو سکتے ہیں۔' } },
+  { id: 'block', cat: 'Safety', k: ['block', 'unblock', 'stop contact', 'بلاک', 'حظر'],
+    q: { en: 'How do I block someone?', ur: 'کسی کو بلاک کیسے کروں؟' },
+    a: { en: 'Open the chat with that person and tap Block. A blocked member cannot message you or see you, and you will not see them. You can unblock later in the Messages tab, under Blocked members. The blocked person is not told.',
+         ur: 'اس شخص کی چیٹ کھول کر Block دبائیں۔ بلاک شدہ ممبر آپ کو پیغام نہیں کر سکتا اور نہ آپ کو دیکھ سکتا ہے، اور آپ اسے نہیں دیکھیں گے۔ بعد میں Messages ٹیب میں Blocked members کے نیچے سے اَن بلاک کر سکتے ہیں۔ بلاک ہونے والے کو بتایا نہیں جاتا۔' } },
+  { id: 'report', cat: 'Safety', k: ['report', 'abuse', 'harass', 'fake', 'scam', 'complain', 'inappropriate', 'رپورٹ', 'شکایت', 'دھوکہ', 'جعلی', 'إبلاغ', 'احتيال'],
+    q: { en: 'How do I report a member or a scam?', ur: 'کسی ممبر یا فراڈ کی رپورٹ کیسے کروں؟' },
+    a: { en: 'Use Report in a chat, on a member card in Search, or on a broker page, and choose what happened: harassment, scam, fake profile, inappropriate content or other. Our team reviews every report. You can have one open report per member, and up to 10 reports an hour. Never send money or bank details to anyone you meet here.',
+         ur: 'چیٹ میں، تلاش میں ممبر کے کارڈ پر، یا بروکر کے صفحے پر Report دبائیں اور بتائیں کہ کیا ہوا: ہراسانی، فراڈ، جعلی پروفائل، نامناسب مواد یا کچھ اور۔ ہماری ٹیم ہر رپورٹ دیکھتی ہے۔ ایک ممبر کے خلاف ایک کھلی رپورٹ ہو سکتی ہے، اور ایک گھنٹے میں 10 رپورٹس تک۔ یہاں ملنے والے کسی کو پیسے یا بینک کی تفصیل ہرگز نہ بھیجیں۔' } },
+  { id: 'safety', cat: 'Safety', k: ['safe', 'safety', 'tips', 'meet', 'trust', 'محفوظ', 'حفاظت', 'ملاقات', 'أمان'],
+    q: { en: 'How can I stay safe when talking to someone?', ur: 'کسی سے بات کرتے ہوئے محفوظ کیسے رہوں؟' },
+    a: { en: 'Keep conversations on the site at first, involve your family, never send money or share bank or card details, be careful with anyone who rushes you or asks to move to another app, check the Verified badge, and meet only in a public place with family. Our Safety tips page has more.',
+         ur: 'شروع میں گفتگو سائٹ ہی پر رکھیں، اپنے خاندان کو شامل کریں، کبھی پیسے نہ بھیجیں اور بینک یا کارڈ کی تفصیل نہ دیں، جلدی مچانے والے یا کسی اور ایپ پر جانے کا کہنے والے سے ہوشیار رہیں، ویریفائیڈ بیج دیکھیں، اور صرف عوامی جگہ پر خاندان کے ساتھ ملیں۔ مزید باتیں Safety tips کے صفحے پر ہیں۔' } },
+  { id: 'auto', cat: 'Safety', k: ['automatic', 'flagged', 'held', 'safety check', 'moderation', 'why held', 'خودکار', 'روکی', 'جانچ'],
+    q: { en: 'Why was my profile held for a safety check?', ur: 'میری پروفائل حفاظتی جانچ کے لیے کیوں روکی گئی؟' },
+    a: { en: 'Profile text is scanned automatically for things like scam wording, abusive language, phone numbers, links and social media names. This never rejects anyone by itself; it only holds the profile so a person on our team can look. Remove such wording and save again, or wait for our team. You will be notified.',
+         ur: 'پروفائل کی تحریر خودکار طور پر دیکھی جاتی ہے کہ کہیں فراڈ کے الفاظ، گالی گلوچ، فون نمبر، لنک یا سوشل میڈیا نام تو نہیں۔ یہ خود کسی کو رد نہیں کرتی، صرف پروفائل روکتی ہے تاکہ ہماری ٹیم کا کوئی فرد دیکھ سکے۔ ایسے الفاظ ہٹا کر دوبارہ Save کریں یا ٹیم کا انتظار کریں۔ آپ کو اطلاع ملے گی۔' } },
+  { id: 'warning', cat: 'Safety', k: ['appeal', 'suspended', 'suspension', 'banned', 'warning', 'warned', 'معطل', 'اپیل', 'انتباہ', 'وارننگ', 'تحذير', 'إيقاف'],
+    q: { en: 'My account was suspended or I got a warning. What can I do?', ur: 'میرا اکاؤنٹ معطل ہوا یا وارننگ ملی۔ میں کیا کروں؟' },
+    a: { en: 'Open the notice at the top of the page or in Alerts: it shows the reason. You can acknowledge a warning. If your account is suspended and you think it is a mistake, send an appeal and explain in at least 20 characters. Where our team has more than one reviewer, a different person from the one who decided reviews it. You can have a limited number of appeals per hour.',
+         ur: 'صفحے کے اوپر یا Alerts میں نوٹس کھولیں، اس میں وجہ لکھی ہے۔ وارننگ کو تسلیم (acknowledge) کر سکتے ہیں۔ اگر اکاؤنٹ معطل ہو اور آپ کو غلطی لگے تو اپیل بھیجیں اور کم از کم 20 حروف میں وجہ لکھیں۔ جہاں ٹیم میں ایک سے زیادہ جائزہ لینے والے ہوں، وہاں اسے فیصلہ کرنے والے سے مختلف فرد دیکھتا ہے۔ ایک گھنٹے میں اپیلوں کی تعداد محدود ہے۔' } },
+  { id: 'alerts', cat: 'Using the site', k: ['notification', 'alerts', 'notify', 'unread', 'اطلاع', 'الرٹ', 'إشعار'],
+    q: { en: 'Where do I see notifications?', ur: 'اطلاعات کہاں دیکھوں؟' },
+    a: { en: 'Open the Alerts tab. It shows messages from our team, approvals, warnings, and other updates. The number on the tab shows what is unread.',
+         ur: 'Alerts ٹیب کھولیں۔ اس میں ہماری ٹیم کے پیغامات، منظوری، وارننگ اور دیگر اطلاعات ہیں۔ ٹیب پر موجود نمبر بغیر پڑھی اطلاعات بتاتا ہے۔' } },
+  { id: 'language', cat: 'Using the site', k: ['language', 'urdu', 'arabic', 'english', 'translate', 'rtl', 'زبان', 'اردو', 'عربی', 'انگریزی', 'لغة'],
+    q: { en: 'Can I use the site in Urdu or Arabic?', ur: 'کیا میں سائٹ اردو یا عربی میں استعمال کر سکتا ہوں؟' },
+    a: { en: 'Yes. Use the language box at the top of the page to switch between English, Urdu and Arabic. The page changes at once and Urdu and Arabic read right to left. What members write in their own profiles is shown as they wrote it.',
+         ur: 'جی ہاں۔ صفحے کے اوپر زبان کے خانے سے انگریزی، اردو اور عربی بدلیں۔ صفحہ فوراً بدل جاتا ہے اور اردو اور عربی دائیں سے بائیں پڑھی جاتی ہیں۔ ممبرز اپنی پروفائل میں جو لکھتے ہیں وہ ویسا ہی نظر آتا ہے۔' } },
+  { id: 'privacy', cat: 'Your data', k: ['privacy', 'private', 'data', 'who can see', 'email shown', 'cookies', 'پرائیویسی', 'محفوظ', 'ڈیٹا', 'خصوصية', 'بيانات'],
+    q: { en: 'Who can see my information?', ur: 'میری معلومات کون دیکھ سکتا ہے؟' },
+    a: { en: 'Your email is never shown to other members. Only approved members can see your profile answers, and your photo only if you chose to show it. Our team can see what is needed to run and protect the site. We use a sign-in cookie and a language setting, and no advertising or tracking cookies. See the Privacy Policy for details.',
+         ur: 'آپ کی ای میل کسی دوسرے ممبر کو نظر نہیں آتی۔ صرف منظور شدہ ممبرز آپ کے جوابات دیکھتے ہیں، اور تصویر صرف اس صورت میں اگر آپ نے دکھانے کا انتخاب کیا ہو۔ ہماری ٹیم صرف وہی دیکھتی ہے جو سائٹ چلانے اور محفوظ رکھنے کے لیے ضروری ہو۔ ہم صرف لاگ اِن کوکی اور زبان کی ترتیب استعمال کرتے ہیں، اشتہاری یا ٹریکنگ کوکیز نہیں۔ تفصیل پرائیویسی پالیسی میں ہے۔' } },
+  { id: 'export', cat: 'Your data', k: ['download my data', 'export', 'copy of my data', 'my data', 'ڈاؤن لوڈ', 'ڈیٹا کی کاپی', 'تصدير'],
+    q: { en: 'Can I download a copy of my data?', ur: 'کیا میں اپنے ڈیٹا کی کاپی ڈاؤن لوڈ کر سکتا ہوں؟' },
+    a: { en: 'Yes. In Settings, use the download option to get a file with your account details, profile, photo, chats, shortlist and safety records that relate to you.',
+         ur: 'جی ہاں۔ Settings میں ڈاؤن لوڈ کا آپشن استعمال کر کے اپنے اکاؤنٹ، پروفائل، تصویر، چیٹس، شارٹ لسٹ اور اپنے سے متعلق حفاظتی ریکارڈ کی فائل لے سکتے ہیں۔' } },
+  { id: 'delete', cat: 'Your data', k: ['delete', 'remove account', 'close account', 'deactivate', 'ڈیلیٹ', 'اکاؤنٹ ختم', 'حذف', 'ہٹا'],
+    q: { en: 'How do I delete my account?', ur: 'اکاؤنٹ ڈیلیٹ کیسے کروں؟' },
+    a: { en: `Open Settings (the gear icon), find Delete my account, type DELETE in capital letters and press the red button. Your profile, photo, messages and shortlist are removed for good and this cannot be undone. Copies inside encrypted backups can remain until they expire, after ${c.backupDays} days. If nothing happens, check you typed DELETE exactly and that you are still signed in.`,
+         ur: `Settings (گیئر کا نشان) کھولیں، Delete my account میں بڑے حروف میں DELETE لکھیں اور سرخ بٹن دبائیں۔ آپ کی پروفائل، تصویر، پیغامات اور شارٹ لسٹ ہمیشہ کے لیے ہٹ جاتے ہیں اور یہ واپس نہیں ہو سکتا۔ خفیہ بیک اپ میں موجود کاپیاں ${c.backupDays} دن بعد ختم ہونے تک رہ سکتی ہیں۔ کچھ نہ ہو تو دیکھیں کہ DELETE بالکل درست لکھا ہے اور آپ ابھی لاگ اِن ہیں۔` } },
+  { id: 'contact', cat: 'Help', k: ['support', 'contact us', 'help', 'email', 'human', 'problem', 'complaint', 'مدد', 'سپورٹ', 'رابطہ کریں', 'مسئلہ', 'دعم'],
+    q: { en: 'How do I contact the team?', ur: 'ٹیم سے رابطہ کیسے کروں؟' },
+    a: { en: `Write to ${sup}. Please include the email address you sign in with. For a safety concern, also use the Report button on the member so our team can see it quickly.`,
+         ur: `${c.email || 'ہماری سپورٹ ٹیم (Contact کا صفحہ دیکھیں)'} پر لکھیں۔ اپنی لاگ اِن ای میل ضرور لکھیں۔ حفاظتی مسئلے میں ممبر پر Report کا بٹن بھی استعمال کریں تاکہ ہماری ٹیم جلد دیکھ سکے۔` } },
+  ];
+}
+
+function faq(c) {
+  const items = kb(c), cats = [...new Set(items.map(i => i.cat))];
+  const body = '<p>Quick answers about registering, your profile and using the site. Each answer is also given in Urdu. Our in-app assistant (the chat button) uses the same answers.</p>' +
+    cats.map(cat => `<h2>${esc(cat)}</h2>` + items.filter(i => i.cat === cat).map(i =>
+      `<details id="${esc(i.id)}" style="margin:8px 0;border:1px solid var(--ln);border-radius:12px;padding:10px 14px;background:var(--cd)"><summary style="cursor:pointer;font-weight:600">${esc(i.q.en)}</summary><p>${esc(i.a.en)}</p><p lang="ur" dir="rtl" style="font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq',serif;line-height:2.1"><b>${esc(i.q.ur)}</b><br>${esc(i.a.ur)}</p></details>`).join('')).join('') +
+    `<h2>Still need help?</h2><p>${c.email ? `Write to ${mail(c)}.` : 'See our <a href="/contact">Contact page</a>.'}</p>`;
+  return shell(c, 'Help and FAQ', body);
+}
+
+/* plain text of the answers (English), used by the AI assistant as its only source of facts */
+const kbText = c => kb(c).map(i => `Q: ${i.q.en}\nA: ${i.a.en}`).join('\n\n');
+
+module.exports = { terms, privacy, safety, contact, faq, kb, kbText };
