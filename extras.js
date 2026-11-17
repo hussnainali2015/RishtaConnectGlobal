@@ -35,7 +35,7 @@ function cleanJpeg(buf) {
 }
 
 module.exports = function (x) {
-  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, admins } = x;
+  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, admins, ps } = x;
   const cfg = {
     name: E.BUSINESS_NAME || 'Rishta Connect Global', email: E.SUPPORT_EMAIL || '', reviewed: E.LEGAL_REVIEWED === 'true',
     juris: E.LEGAL_JURISDICTION || 'the laws of the country where the operator of this website is established', backupDays: String(parseInt(E.BACKUP_KEEP, 10) || 14),
@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
       db.prepare('DELETE FROM users WHERE email=?').run(em);
       audit('self', 'account-deleted', g, 'member deleted own account');
     })();
+    if (ps) ps.remove(em);
     res.clearCookie('rcg_session', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
     res.json({ ok: true });
   }));
