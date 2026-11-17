@@ -164,7 +164,7 @@ app.post('/api/auth/apple', csrf, wrap(async (req, res) => {
 
 app.get('/api/me', auth, (req, res) => res.json({
   email: req.user.email, name: req.user.name, isAdmin: admins.has(req.user.email),
-  profile: req.user.profile_json ? JSON.parse(req.user.profile_json) : null, verification: vstate(req.user.email), status: req.user.status, broker: binfo(req.user.email),
+  profile: req.user.profile_json ? JSON.parse(req.user.profile_json) : null, verification: vstate(req.user.email), status: req.user.status, statusReason: (r => r ? r.reason : null)(db.prepare('SELECT reason FROM member_status WHERE email=?').get(req.user.email)), broker: binfo(req.user.email),
   photo: (r => r ? { has: true, visible: !!r.visible } : { has: false, visible: false })(db.prepare('SELECT visible FROM photos WHERE email=?').get(req.user.email)),
   consent: !!req.user.consent_at, unread: unreadCount(req.user.email), warnings: activeWarnings(req.user.email), appeal: openAppeals(req.user.email),
 }));
@@ -179,6 +179,7 @@ app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   if (!req.user.consent_at && b.agree !== true) return res.status(400).json({ error: 'Please accept the Terms and the Privacy Policy to continue.' });
   db.prepare('UPDATE users SET profile_json=?, consent_at=COALESCE(consent_at,?) WHERE email=?').run(JSON.stringify(prof), now(), req.user.email);
   db.prepare('INSERT OR IGNORE INTO verification(email,updated_at) VALUES(?,?)').run(req.user.email, now());
+  if (mstatus(req.user.email) === 'rejected') setStatus(req.user.email, 'pending', null); // sent again after fixing it
   if (E.REQUIRE_APPROVAL === 'true') db.prepare("INSERT OR IGNORE INTO member_status(email,status,updated_at) VALUES(?,'pending',?)").run(req.user.email, now()); // new profiles wait for an admin
   ps.sync(req.user.email);
   res.json({ ok: true });
@@ -284,6 +285,34 @@ app.post('/api/admin/members/:email/suspend', auth, adminOnly, csrf, wrap(async 
   audit(req.user.email, 'suspend-member', email, reason);
   notify(email, 'moderation', 'Your account was suspended', SUSPEND_TEXT);
   res.json({ status: 'suspended' });
+}));
+// Everything an admin needs to decide on one registration: profile answers, photo, verification checks, history.
+app.get('/api/admin/members/:email/review', auth, adminOnly, (req, res) => {
+  const email = target(req, res); if (!email) return;
+  const u = db.prepare('SELECT email,name,provider,profile_json,consent_at,created_at FROM users WHERE email=?').get(email);
+  const st = db.prepare('SELECT status,reason,updated_at FROM member_status WHERE email=?').get(email);
+  const ph = db.prepare('SELECT visible FROM photos WHERE email=?').get(email);
+  res.json({
+    email, name: u.name, provider: u.provider, created_at: u.created_at, consent_at: u.consent_at,
+    profile: JSON.parse(u.profile_json), status: st ? st.status : 'approved', reason: st ? st.reason : null, status_at: st ? st.updated_at : null,
+    verification: vstate(email), photo: { has: !!ph, visible: !!(ph && ph.visible) },
+    reports_against: db.prepare('SELECT COUNT(*) n FROM reports WHERE reported=?').get(email).n,
+    warnings: db.prepare("SELECT COUNT(*) n FROM warnings WHERE email=? AND status='active'").get(email).n,
+    history: db.prepare("SELECT at,admin AS actor,action,reason AS note FROM audit WHERE payment_id=? ORDER BY id DESC LIMIT 10").all(email),
+  });
+});
+// Reject a registration (the member sees the reason and can fix the profile and send it again).
+app.post('/api/admin/members/:email/reject', auth, adminOnly, csrf, wrap(async (req, res) => {
+  const email = target(req, res); if (!email) return;
+  if (admins.has(email)) return res.status(400).json({ error: "Admin accounts can't be rejected" });
+  const before = mstatus(email);
+  if (before !== 'pending' && before !== 'rejected') return res.status(400).json({ error: 'Only a registration that is waiting for approval can be rejected. Use Suspend for a live member.' });
+  const reason = s(req.body && req.body.reason, 200);
+  if (reason.length < 3) return res.status(400).json({ error: 'Enter a reason so the member knows what to fix' });
+  setStatus(email, 'rejected', reason);
+  audit(req.user.email, 'reject-member', email, reason);
+  notify(email, 'moderation', 'Your profile was not approved', 'Reason: ' + reason + '. Please update your profile and save it again, and our team will review it once more.');
+  res.json({ status: 'rejected' });
 }));
 // Approve covers both cases: admit a pending member, or reinstate a suspended one.
 app.post('/api/admin/members/:email/approve', auth, adminOnly, csrf, wrap(async (req, res) => {
