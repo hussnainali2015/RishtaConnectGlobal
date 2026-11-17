@@ -173,7 +173,7 @@ app.get('/api/me', auth, (req, res) => res.json({
 const s = (v, max) => String(v || '').trim().slice(0, max);
 app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, age = parseInt(b.a, 10);
-  const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300) };
+  const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300), f: b.f === true };
   if (!(age >= 18 && age <= 70) || !prof.n || !prof.c || !prof.e || !prof.j || !prof.x || !prof.w) return res.status(400).json({ error: 'Complete every field. Age must be 18 to 70.' });
   if (!['Never married', 'Divorced', 'Widowed'].includes(prof.m)) prof.m = 'Never married';
   if (!req.user.consent_at && b.agree !== true) return res.status(400).json({ error: 'Please accept the Terms and the Privacy Policy to continue.' });
@@ -311,6 +311,22 @@ app.post('/api/broker/apply', auth, csrf, wrap(async (req, res) => {
     .run(req.user.email, JSON.stringify(prof), now(), now());
   res.json({ ok: true });
 }));
+/* --- Featured profiles on the home page: only members who ticked the box, approved AND fully verified, first name only.
+   Temporary sample profiles (featured-samples.js) fill the empty places while the site is new and are clearly marked as samples. --- */
+const FEATURED = 6;
+let SAMPLES = [];
+if (E.SHOW_SAMPLE_PROFILES !== 'false') { try { SAMPLES = require('./featured-samples'); } catch { SAMPLES = []; } }
+app.get('/api/featured', (req, res) => {
+  const real = [];
+  for (const u of db.prepare("SELECT email,profile_json FROM users WHERE profile_json LIKE '%\"f\":true%' ORDER BY created_at DESC").all()) {
+    if (real.length >= FEATURED) break;
+    let p; try { p = JSON.parse(u.profile_json); } catch { continue; }
+    if (p.f !== true || mstatus(u.email) !== 'approved' || !vstate(u.email).verified) continue;
+    real.push({ n: String(p.n || '').split(/\s+/)[0], a: p.a, c: p.c, j: p.j, g: p.g, verified: true });
+  }
+  const fill = SAMPLES.slice(0, Math.max(0, FEATURED - real.length)).map(x => ({ ...x, sample: true }));
+  res.set('Cache-Control', 'no-store'); res.json([...real, ...fill]);
+});
 app.get('/api/brokers', (req, res) => { // public list: approved brokers only, no emails
   const rows = db.prepare("SELECT email,profile_json FROM brokers WHERE status='approved' ORDER BY updated_at DESC").all();
   const rt = {}; for (const r of db.prepare("SELECT broker,COUNT(*) n,AVG(rating) a FROM broker_reviews WHERE status='published' GROUP BY broker").all()) rt[r.broker] = { count: r.n, avg: Math.round(r.a * 10) / 10 };
