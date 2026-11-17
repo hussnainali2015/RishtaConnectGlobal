@@ -444,6 +444,7 @@
     "Type DELETE (capital letters) to confirm.": ["تصدیق کے لیے بڑے حروف میں DELETE لکھیں۔","اكتب DELETE بأحرف كبيرة للتأكيد."],
     "Featured profiles": ["نمایاں پروفائلز","الملفات المميزة"],
     "Sample profile": ["نمونہ پروفائل","ملف تجريبي"],
+    "Sample profiles are examples only, with illustrated portraits, shown until real members join. They cannot be contacted.": ["نمونہ پروفائلز صرف مثال ہیں، ان میں خاکے کی تصاویر ہیں، اور حقیقی ممبرز کے شامل ہونے تک دکھائے جاتے ہیں۔ ان سے رابطہ نہیں کیا جا سکتا۔","الملفات التجريبية للأمثلة فقط وبصور مرسومة، وتظهر حتى ينضم أعضاء حقيقيون. لا يمكن التواصل معها."],
     "Sample profiles are examples only, shown until real members join. They cannot be contacted.": ["نمونہ پروفائلز صرف مثال ہیں اور حقیقی ممبرز کے شامل ہونے تک دکھائے جاتے ہیں۔ ان سے رابطہ نہیں کیا جا سکتا۔","الملفات التجريبية للأمثلة فقط وتظهر حتى ينضم أعضاء حقيقيون. لا يمكن التواصل معها."],
     "Browse members": ["ممبرز دیکھیں","تصفح الأعضاء"],
     "Show my first name, age, city and occupation in \"Featured profiles\" on the home page (optional). Only if my profile is approved and verified.": ["میرا پہلا نام، عمر، شہر اور پیشہ ہوم پیج کے \"نمایاں پروفائلز\" میں دکھائیں (اختیاری)۔ صرف اس صورت میں جب میری پروفائل منظور اور تصدیق شدہ ہو۔","اعرض اسمي الأول وعمري ومدينتي ومهنتي في \"الملفات المميزة\" بالصفحة الرئيسية (اختياري). فقط إذا كان ملفي معتمدًا وموثقًا."],
