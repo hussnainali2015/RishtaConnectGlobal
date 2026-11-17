@@ -62,6 +62,7 @@ function privacy(c) {
 <h2>How we use it</h2><p>To run your account, show your profile to other members, let members and brokers talk, keep members safe, prevent fraud, answer your requests, and meet legal duties. We do not sell your information and we do not use it for advertising.</p>
 <h2>Who can see what</h2><ul>
 <li><b>Other members</b> whose profiles are approved can see your name, age, city, occupation, education, marital status, your two text answers, and your verification badges. They never see your email address. They see your photo only if you chose to show it to members.</li>
+<li><b>Anyone visiting the home page</b> sees your first name, age, city and occupation <u>only if</u> you ticked "Show me in Featured profiles" on your profile and your profile is approved and verified. You can untick it at any time.</li>
 <li><b>Brokers</b> see what a member shares with them in chat.</li>
 <li><b>Our administrators</b> can see accounts and reports, and read a conversation only when it has been reported. Their actions are logged.</li>
 <li><b>Google and Apple</b> process your sign-in.</li>
