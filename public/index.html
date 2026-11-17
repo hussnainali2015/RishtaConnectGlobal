@@ -217,6 +217,7 @@ async function go(v,a){
  V=v;A=a;D.lock=null;if(v=='chat')D.chat=null;
  try{
   if(v=='home')D.brokers=await api('/api/brokers').catch(()=>D.brokers||[]);
+  if(v=='home')api('/api/featured').then(x=>{D.featured=x;if(V=='home')render()}).catch(()=>{});
   if(v=='search'){try{const r=await api('/api/members?'+new URLSearchParams(a||{}));D.members=r.rows;D.mp={page:r.page,pages:r.pages,total:r.total}}catch(e){D.members=[];D.mp=null;D.lock=e.message}}
   if(v=='shortlist'){try{D.members=await api('/api/shortlist')}catch(e){D.members=[];D.lock=e.message}}
   if(v=='member'){try{D.m1=await api('/api/members/'+encodeURIComponent(a))}catch(e){toast(e.message);return go('search')}}
@@ -260,6 +261,7 @@ function profileForm(p){p=p||{};const o=(a,v)=>a.map(x=>`<option ${v==x?'selecte
 <div class="two"><label>City, country<input name="c" required maxlength="60" value="${esc(p.c||'')}"></label><label>Marital status<select name="m">${o(['Never married','Divorced','Widowed'],p.m)}</select></label></div>
 <div class="two"><label>Education<input name="e" required maxlength="60" value="${esc(p.e||'')}"></label><label>Occupation<input name="j" required maxlength="60" value="${esc(p.j||'')}"></label></div>
 <label>About you<textarea name="x" rows="3" required maxlength="400">${esc(p.x||'')}</textarea></label><label>Looking for<textarea name="w" rows="2" required maxlength="300">${esc(p.w||'')}</textarea></label>
+<label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="f" style="width:auto;margin-top:4px"${p.f?' checked':''}> <span>Show my first name, age, city and occupation in &quot;Featured profiles&quot; on the home page (optional). Only if my profile is approved and verified.</span></label>
 ${me.consent?'':`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="agree" required style="width:auto"> <span>I am 18 or older and I agree to: <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>`}
 <div class="row"><button class="btn">${me.profile?'Save changes':'Save my profile'}</button>${me.profile?`<button type="button" class="btn ol" onclick="go('profile')">Cancel</button>`:''}</div></form></div>`}
 const VIEWS={
@@ -267,6 +269,7 @@ home:()=>`<section class="hero"><div class="wrap hero-in"><div class="hero-txt">
 <div class="wrap"><div class="trust"><div><i>${ico('ok')}</i>Verified profiles</div><div><i>${ico('lock')}</i>Free to join</div><div><i>${ico('chat')}</i>Private, moderated chat</div><div><i>${ico('flag')}</i>Block and report tools</div></div></div>
 <div class="wrap sec"><h2 class="sh">Why families trust us</h2><p class="sub">A respectful place to meet, with your family's peace of mind built in.</p><div class="grid why"><div class="card"><div class="ic">${ico('ok')}</div><h3>Verified badges</h3><p class="mu">Our team checks identity, photo and background before a badge is shown.</p></div><div class="card"><div class="ic">${ico('eye')}</div><h3>Private by design</h3><p class="mu">Your photo stays hidden unless you choose to show it. Your email is never shown to members.</p></div><div class="card"><div class="ic">${ico('chat')}</div><h3>Safe conversations</h3><p class="mu">Private chat with block and report tools, and every report is reviewed by our team.</p></div><div class="card"><div class="ic">${ico('card')}</div><h3>Free to join</h3><p class="mu">Creating a profile and using the site costs nothing. We never ask for a card number or any payment.</p></div></div></div>
 <div class="wrap sec how"><h2 class="sh">How it works</h2><div class="grid"><div class="card"><h3>1. Sign in</h3><p class="mu">Continue with your Google account.</p></div><div class="card"><h3>2. Create your profile</h3><p class="mu">Tell us about yourself and what you seek.</p></div><div class="card"><h3>3. Get approved</h3><p class="mu">Our team checks every new profile. Once it is approved you can search, shortlist and message members. It is free.</p></div><div class="card"><h3>4. Connect</h3><p class="mu">Browse verified members or work with a broker.</p></div></div></div>
+${(D.featured||[]).length?`<div class="wrap sec"><h2 class="sh">Featured profiles</h2><div class="grid">${D.featured.map(f=>`<div class="card"><div class="row"><div class="av">${ini(f.n)}</div><div><b>${esc(f.n)}</b>, ${esc(f.a)} ${f.sample?'<span class="tag">Sample profile</span>':'<span class="tag v">Verified</span>'}<div class="mu">${esc(f.c)} · ${esc(f.j)}</div></div></div></div>`).join('')}</div>${D.featured.some(f=>f.sample)?'<p class="mu" style="text-align:center;margin-top:12px">Sample profiles are examples only, shown until real members join. They cannot be contacted.</p>':''}<div class="row" style="justify-content:center;margin-top:12px"><button class="btn ol" onclick="${me?"go('search')":'login()'}">Browse members</button></div></div>`:''}
 ${(D.brokers||[]).length?`<div class="wrap sec"><div class="row sp"><h2>Trusted brokers</h2><button class="btn ol s" onclick="go('brokers')">See all</button></div><div class="grid">${D.brokers.slice(0,3).map((b,i)=>`<div class="card"><div class="row"><div class="av">${ini(b.n)}</div><div><b>${esc(b.n)}</b> <span class="tag v">Verified</span><div class="mu">${esc(b.c)}</div></div></div><button class="btn ol w" style="margin-top:12px" onclick="go('broker',${i})">View profile</button></div>`).join('')}</div></div>`:''}
 <div class="wrap sec" id="gal" hidden><h2 class="sh">Where good beginnings start</h2><div class="gal">${[1,2,3].map(n=>`<figure><img src="/img/couple-${n}.jpg" alt="A happy couple" loading="lazy" onload="document.getElementById('gal').hidden=false" onerror="this.parentNode.remove()"></figure>`).join('')}</div></div>
 <section class="band"><div class="wrap"><h2>${t('tag')}</h2><p>Verified profiles, trusted brokers and private chat for families across the globe.</p><button class="btn gd big" onclick="${me?"go('profile')":'login()'}">${t('start')}</button></div></section>`,
@@ -329,7 +332,7 @@ function initG(n){if(!window.google||!cfg){if(n<30)setTimeout(()=>initG(n+1),300
  google.accounts.id.renderButton($('#gbtn'),{theme:'filled_black',size:'large',text:'continue_with',width:300})}
 function logout(){act(async()=>{await api('/api/auth/logout',{});me=null;go('home')})}
 function doSearch(e){e.preventDefault();const f=Object.fromEntries([...new FormData(e.target)].filter(([,v])=>v));go('search',f);return false}
-function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.agree=!!f.agree;const had=!!(me&&me.profile);act(async()=>{await api('/api/profile',f);me=await api('/api/me');toast(had?'Profile saved':'Profile saved. Our team will check it before it goes live.');go('profile')});return false}
+function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.agree=!!f.agree;f.f=!!f.f;const had=!!(me&&me.profile);act(async()=>{await api('/api/profile',f);me=await api('/api/me');toast(had?'Profile saved':'Profile saved. Our team will check it before it goes live.');go('profile')});return false}
 function photoVis(on){act(async()=>{await api('/api/photo/visibility',{visible:on});me=await api('/api/me');go('settings')})}
 function photoRemove(){if(!confirm('Remove your photo?'))return;act(async()=>{await api('/api/photo/remove',{});me=await api('/api/me');go('settings')})}
 function pickPhoto(inp){const f=inp.files[0];inp.value='';if(!f)return;act(async()=>{
@@ -415,6 +418,7 @@ function vrev(i){const r=prompt('Reason for revoking verification:');if(!r)retur
  try{me=await api('/api/me')}catch(e){me=null}
  setLang(lang);
  api('/api/brokers').then(b=>{D.brokers=b;if(V=='home')render()}).catch(()=>{});
+ api('/api/featured').then(x=>{D.featured=x;if(V=='home')render()}).catch(()=>{});
  setInterval(async()=>{if(!me||document.hidden)return;try{me=await api('/api/me');nav()}catch(e){}},60000);
 })();
 </script>
