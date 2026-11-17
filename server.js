@@ -125,6 +125,7 @@ app.post('/api/auth/google', csrf, wrap(async (req, res) => {
   if (!p.email || !p.email_verified) return res.status(401).json({ error: 'Email not verified' });
   const email = p.email.toLowerCase();
   db.prepare("INSERT INTO users(email,name,provider,created_at) VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name").run(email, p.name || '', 'google', now());
+  ps.sync(email);
   issue(res, email); res.json({ ok: true });
 }));
 app.post('/api/auth/logout', csrf, (req, res) => { res.clearCookie('rcg_session'); res.json({ ok: true }); });
@@ -179,6 +180,7 @@ app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   db.prepare('UPDATE users SET profile_json=?, consent_at=COALESCE(consent_at,?) WHERE email=?').run(JSON.stringify(prof), now(), req.user.email);
   db.prepare('INSERT OR IGNORE INTO verification(email,updated_at) VALUES(?,?)').run(req.user.email, now());
   if (E.REQUIRE_APPROVAL === 'true') db.prepare("INSERT OR IGNORE INTO member_status(email,status,updated_at) VALUES(?,'pending',?)").run(req.user.email, now()); // new profiles wait for an admin
+  ps.sync(req.user.email);
   res.json({ ok: true });
 }));
 
@@ -260,7 +262,9 @@ function mstatus(email) {
   const r = db.prepare('SELECT status FROM member_status WHERE email=?').get(email);
   return r ? r.status : 'approved';
 }
-const setStatus = (email, status, reason) => db.prepare(
+const ps = require('./profiles-sync')(db, E, mstatus); // optional copy of members into the Supabase "profiles" table
+const setStatus = (email, status, reason) => { const r = setStatus0(email, status, reason); ps.sync(email); return r; };
+const setStatus0 = (email, status, reason) => db.prepare(
   'INSERT INTO member_status(email,status,reason,updated_at) VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET status=excluded.status, reason=excluded.reason, updated_at=excluded.updated_at'
 ).run(email, status, reason || null, now());
 
@@ -674,7 +678,7 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
 }));
 
 require('./reviews')({ app, db, jwt, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, mstatus, bstatus, isBlocked, s });
-require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, whoIs, admins });
+require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, whoIs, admins, ps });
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
 const IMG_DIR = path.join(__dirname, 'public', 'img');
@@ -702,10 +706,11 @@ app.use((err, req, res, next) => { // body too large, bad JSON, and anything une
   res.status(code).json({ error: code === 413 ? 'That upload is too large.' : code === 500 ? 'Something went wrong. Try again.' : 'Bad request' });
 });
 require('./persist').attach(db);
+ps.backfill().catch(e => console.error('Supabase profiles sync failed (will retry):', e.message));
 const server = app.listen(Number(E.PORT) || 3000, () => console.log('Rishta Connect Global listening on ' + (E.PORT || 3000)));
 function shutdown(sig) { // let in-flight requests (and a running backup) finish, then close the database cleanly
   console.log(sig + ' received, shutting down');
-  server.close(() => { require('./persist').flush().catch(() => {}).finally(() => { try { db.close(); } catch { /* already closed */ } process.exit(0); }); });
+  server.close(() => { ps.flush().catch(() => {}).then(() => require('./persist').flush()).catch(() => {}).finally(() => { try { db.close(); } catch { /* already closed */ } process.exit(0); }); });
   setTimeout(() => process.exit(1), 15_000).unref();
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'));
