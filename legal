@@ -63,6 +63,7 @@ function privacy(c) {
 <h2>Who can see what</h2><ul>
 <li><b>Other members</b> whose profiles are approved can see your name, age, city, occupation, education, marital status, your two text answers, and your verification badges. They never see your email address. They see your photo only if you chose to show it to members.</li>
 <li><b>Anyone visiting the home page</b> sees your first name, age, city and occupation <u>only if</u> you ticked "Show me in Featured profiles" on your profile and your profile is approved and verified. You can untick it at any time.</li>
+<li><b>Automatic safety checks.</b> Profile text is scanned automatically for spam, scam wording and abusive content. Flags are only shown to our team, and a person makes every decision. If we switch on the optional AI check, your profile photo and your questions to the help assistant are sent to Anthropic's API for that check only.</li>
 <li><b>Brokers</b> see what a member shares with them in chat.</li>
 <li><b>Our administrators</b> can see accounts and reports, and read a conversation only when it has been reported. Their actions are logged.</li>
 <li><b>Google and Apple</b> process your sign-in.</li>
