@@ -247,6 +247,17 @@ footer .flogo picture{display:block}footer .flogo img{width:100%;height:auto;bor
 .hero{padding-bottom:56px!important}
 .how{padding-bottom:34px}
 @media(max-width:759px){.why{grid-template-columns:1fr 1fr!important;gap:10px!important}.why .card{padding:12px!important}.why .card h3{font-size:.98rem}.why .card p{font-size:.8rem;line-height:1.35}.why .ic{width:36px!important;height:36px!important;margin-bottom:6px!important}}
+
+#asBtn{width:44px!important;height:44px!important;font-size:19px!important;opacity:.94;inset-inline-end:10px!important;bottom:calc(78px + env(safe-area-inset-bottom,0px))!important}
+.vm{margin-top:8px}.vm+.wrap .trust{margin-top:26px!important}.sec{clear:both}
+
+/* lighter overlay: the photo stays vivid, text keeps a soft shadow so it stays readable */
+.hero::after{background:linear-gradient(90deg,rgba(52,6,20,.78) 0%,rgba(52,6,20,.5) 36%,rgba(52,6,20,0) 72%)!important}
+.hero-txt h1,.hero-txt p,.hero-txt .kicker{text-shadow:0 2px 14px rgba(30,2,12,.65)}
+@media(max-width:759px){
+ .hero::after{background:linear-gradient(180deg,rgba(52,6,20,.74) 0%,rgba(52,6,20,.5) 55%,rgba(52,6,20,.28) 100%)!important}
+ .hero-art .arch .in{opacity:.9!important}
+}
 </style></head><body>
 <header class="top"><div class="wrap nav" id="nav"></div></header>
 <main id="app"></main>
