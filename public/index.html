@@ -364,8 +364,8 @@ function profileForm(p){p=p||{};const o=(a,v)=>a.map(x=>`<option ${v==x?'selecte
 <div class="two"><label>City, country<input name="c" required maxlength="60" value="${esc(p.c||'')}"></label><label>Marital status<select name="m">${o(['Never married','Divorced','Widowed'],p.m)}</select></label></div>
 <div class="two"><label>Education<input name="e" required maxlength="60" value="${esc(p.e||'')}"></label><label>Occupation<input name="j" required maxlength="60" value="${esc(p.j||'')}"></label></div>
 <label>About you<textarea name="x" rows="3" required maxlength="400">${esc(p.x||'')}</textarea></label><label>Looking for<textarea name="w" rows="2" required maxlength="300">${esc(p.w||'')}</textarea></label>
-<label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="f" style="width:auto;margin-top:4px"${p.f?' checked':''}> <span>Show my first name, age, city and occupation in &quot;Featured profiles&quot; on the home page (optional). Only if my profile is approved and verified.</span></label>
-<label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="fp" style="width:auto;margin-top:4px"${p.fp?' checked':''}> <span>Also show my photo there (optional). Only if I have uploaded a photo and set it to visible. Anyone visiting the home page could see it.</span></label>
+<label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="f" style="width:auto;margin-top:4px"${p.f?' checked':''}> <span>Show me in &quot;Featured profiles&quot; on the home page, with my photo if it is set to visible (optional). Only if my profile is approved and verified. Anyone visiting the home page could see my photo.</span></label>
+
 ${me.consent?'':`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="agree" required style="width:auto"> <span>I am 18 or older and I agree to: <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>`}
 <div class="row"><button class="btn">${me.profile?'Save changes':'Save my profile'}</button>${me.profile?`<button type="button" class="btn ol" onclick="go('profile')">Cancel</button>`:''}</div></form></div>`}
 const VIEWS={
@@ -437,7 +437,7 @@ function initG(n){if(!window.google||!cfg){if(n<30)setTimeout(()=>initG(n+1),300
  google.accounts.id.renderButton($('#gbtn'),{theme:'filled_black',size:'large',text:'continue_with',width:300})}
 function logout(){act(async()=>{await api('/api/auth/logout',{});me=null;go('home')})}
 function doSearch(e){e.preventDefault();const f=Object.fromEntries([...new FormData(e.target)].filter(([,v])=>v));go('search',f);return false}
-function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.agree=!!f.agree;f.f=!!f.f;f.fp=!!f.fp;const had=!!(me&&me.profile);act(async()=>{await api('/api/profile',f);me=await api('/api/me');toast(had?'Profile saved':'Profile saved. Our team will check it before it goes live.');go('profile')});return false}
+function saveProfile(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.agree=!!f.agree;f.f=!!f.f;f.fp=f.f;const had=!!(me&&me.profile);act(async()=>{await api('/api/profile',f);me=await api('/api/me');toast(had?'Profile saved':'Profile saved. Our team will check it before it goes live.');go('profile')});return false}
 function photoVis(on){act(async()=>{await api('/api/photo/visibility',{visible:on});me=await api('/api/me');go('settings')})}
 function photoRemove(){if(!confirm('Remove your photo?'))return;act(async()=>{await api('/api/photo/remove',{});me=await api('/api/me');go('settings')})}
 function pickPhoto(inp){const f=inp.files[0];inp.value='';if(!f)return;act(async()=>{
