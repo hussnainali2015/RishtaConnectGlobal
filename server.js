@@ -173,7 +173,7 @@ app.get('/api/me', auth, (req, res) => res.json({
 const s = (v, max) => String(v || '').trim().slice(0, max);
 app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, age = parseInt(b.a, 10);
-  const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300), f: b.f === true, fp: b.f === true && b.fp === true };
+  const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300), f: b.f === true, fp: b.f === true };
   if (!(age >= 18 && age <= 70) || !prof.n || !prof.c || !prof.e || !prof.j || !prof.x || !prof.w) return res.status(400).json({ error: 'Complete every field. Age must be 18 to 70.' });
   if (!['Never married', 'Divorced', 'Widowed'].includes(prof.m)) prof.m = 'Never married';
   if (!req.user.consent_at && b.agree !== true) return res.status(400).json({ error: 'Please accept the Terms and the Privacy Policy to continue.' });
