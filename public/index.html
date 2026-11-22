@@ -164,18 +164,6 @@ footer .flogo{display:block;width:min(240px,70%);margin:0 auto 14px;background:#
 footer .flogo picture{display:block}footer .flogo img{width:100%;height:auto;border-radius:0;margin:0;box-shadow:none;display:block}
 
 
-.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-@media(min-width:760px){.fgrid{grid-template-columns:repeat(3,1fr);gap:22px}}
-.fcard{background:#fff;border:1px solid var(--ln);border-radius:22px;overflow:hidden;box-shadow:0 18px 38px -26px rgba(79,10,31,.55);display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
-.fcard:hover{transform:translateY(-3px);box-shadow:0 26px 44px -26px rgba(79,10,31,.6)}
-.fph{position:relative;aspect-ratio:4/5;background:#efe3d3;overflow:hidden}
-.fph svg{display:block;width:100%;height:100%}
-.fph .fb{position:absolute;top:10px;inset-inline-start:10px;background:rgba(255,250,242,.94);color:var(--mr);font-size:11px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.fph .fb.v{background:var(--mr);color:#fff}
-.fbody{padding:14px 16px 16px}
-.fbody b{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--mr)}
-.fbody .mu{margin-top:4px;font-size:.9rem;line-height:1.35}
-@media(max-width:480px){.fbody{padding:11px 12px 14px}.fbody b{font-size:1.05rem}}
 
 #asBtn{position:fixed;z-index:15;inset-inline-end:14px;bottom:calc(86px + env(safe-area-inset-bottom,0px));width:52px;height:52px;border-radius:50%;border:0;background:var(--mr);color:#fff;font-size:22px;box-shadow:0 10px 24px -8px rgba(79,10,31,.6);cursor:pointer}
 #asP{position:fixed;z-index:61;inset-inline-end:10px;bottom:calc(150px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100vw - 20px));height:min(62vh,500px);background:#fff;border:1px solid var(--ln);border-radius:20px;box-shadow:0 24px 50px -20px rgba(40,8,18,.6);display:none;flex-direction:column;overflow:hidden}
@@ -190,6 +178,38 @@ footer .flogo picture{display:block}footer .flogo img{width:100%;height:auto;bor
 #asC button{border:1px solid var(--ln);background:#fff;border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--mr)}
 #asP form{display:flex;gap:6px;padding:10px;border-top:1px solid var(--ln)}
 #asP form input{flex:1;min-width:0}
+
+:root{--sand:#f6ecdc;--rose:#f4e1dc;--trust:#1f5d50;--shadow:0 18px 40px -28px rgba(79,10,31,.55)}
+.vbadge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#8a1636,#5a0b24);color:#fbe7b0;border:1px solid #c79a3a;border-radius:999px;padding:3px 11px 3px 7px;font-size:12px;font-weight:600;letter-spacing:.01em;white-space:nowrap;box-shadow:0 4px 12px -6px rgba(79,10,31,.7)}
+.vbadge svg{width:15px;height:15px;fill:#e8c46c;flex:none}
+.pc{background:#fff;border:1px solid var(--ln);border-radius:20px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;transition:transform .18s,box-shadow .18s}
+.pc:hover{transform:translateY(-2px)}
+.pc-h{display:flex;gap:14px;align-items:center;cursor:pointer}
+.pc .av{width:64px;height:64px;border-radius:18px;font-size:22px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.pc-t{flex:1;min-width:0}.pc-t b{display:block;font:700 1.15rem 'Playfair Display',Georgia,serif;color:var(--mr);line-height:1.2}
+.pc-t .mu{font-size:.88rem}
+
+.pc-chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px}
+.pc-chips span{background:var(--sand);color:#5b4636;border-radius:999px;padding:3px 11px;font-size:.8rem}
+.pc-x{margin:8px 0 12px;color:#4a3a3f;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.pc-f{display:flex;gap:8px;flex-wrap:wrap}.pc-f .btn:first-child{flex:1}
+.sechead{text-align:center;margin-bottom:16px}.sechead p{margin:0}
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(min-width:760px){.fgrid{grid-template-columns:repeat(3,1fr);gap:22px}}
+.fcard{background:#fff;border:1px solid var(--ln);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .2s}
+.fcard:hover{transform:translateY(-3px)}
+.fcover{position:relative;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px 8px;overflow:hidden}
+.fcover.c0{background:linear-gradient(145deg,#f7e4c4,#e2b873)}.fcover.c1{background:linear-gradient(145deg,#f4d9d2,#d98f86)}.fcover.c2{background:linear-gradient(145deg,#efe0c6,#b8863a)}.fcover.c3{background:linear-gradient(145deg,#ead3d6,#a8506a)}
+.fcover>svg{position:absolute;inset:0;width:100%;height:100%}
+.fav{width:86px;height:86px;border-radius:50%;background:rgba(255,255,255,.88);color:var(--mr);display:grid;place-items:center;font:700 32px 'Playfair Display',serif;box-shadow:0 10px 24px -10px rgba(79,10,31,.6)}
+.fcover .vbadge,.fcover .fs{position:relative;z-index:1}.fcover .fs{position:absolute;top:10px;inset-inline-start:10px}
+.fs{background:rgba(255,250,242,.94);color:var(--mr);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px}
+.fbody{padding:14px 16px 16px}
+.fbody b{font:700 1.2rem 'Playfair Display',serif;color:var(--mr)}
+.fbody .mu{margin-top:3px;font-size:.9rem;line-height:1.35}
+.fchk{list-style:none;display:flex;flex-wrap:wrap;gap:4px 12px;margin:10px 0 0;padding:10px 0 0;border-top:1px dashed var(--ln);font-size:.78rem;color:var(--trust);font-weight:600}
+.fchk li::before{content:"✓ "}
+@media(max-width:480px){.fbody{padding:11px 12px 14px}.fbody b{font-size:1.05rem}.fav{width:68px;height:68px;font-size:26px}.fcover .vbadge{font-size:10.5px;padding:2px 8px 2px 5px}.fcover{min-height:150px}}
 </style></head><body>
 <header class="top"><div class="wrap nav" id="nav"></div></header>
 <main id="app"></main>
@@ -216,7 +236,8 @@ ur:{home:'ہوم',search:'تلاش',brokers:'بروکرز',msgs:'پیغامات'
 ar:{home:'الرئيسية',search:'بحث',brokers:'الوسطاء',msgs:'الرسائل',profile:'ملفي',login:'دخول',out:'خروج',tag:'رحلتك نحو الشريك المثالي',start:'ابدأ الآن',find:'ابحث عن شريك حياتك'}};
 const t=k=>T[lang][k];
 const avt=(m,cls)=>`<div class="av ${cls||''}">${m.ph?`<img src="/api/photo/${encodeURIComponent(m.id)}" alt="">`:ini(m.n)}</div>`;
-const mcard=(m,i)=>`<div class="card"><div class="row" style="cursor:pointer" onclick="openMember(${i})">${avt(m)}<div><b>${esc(m.n)}</b> ${m.verified?'<span class="tag v">Verified</span>':'<span class="tag">Unverified</span>'}<div class="mu">${m.a} yrs · ${esc(m.c)} · ${esc(m.j)}</div></div></div><p>${esc(m.x)}</p><div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" onclick="chatWith(${i})">Send message</button><button class="btn ol" onclick="openMember(${i})">View</button><button class="btn ol" onclick="toggleSl('${m.id}',${m.sl},V)" aria-label="${m.sl?'Remove from shortlist':'Save to shortlist'}">${m.sl?'★':'☆'}</button><button class="btn ol" onclick="reportMember(${i})" aria-label="Report ${esc(m.n)}">Report</button></div></div>`;
+const VB=t=>`<span class="vbadge" title="Identity, photo and background checked by our team"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.4-4.4 1.4 1.4-5.8 5.8z"/></svg>${t||'Manually verified'}</span>`;
+const mcard=(m,i)=>`<div class="pc"><div class="pc-h" onclick="openMember(${i})">${avt(m)}<div class="pc-t"><b>${esc(m.n)}</b><span class="mu">${m.a} yrs · ${esc(m.c)}</span><div style="margin-top:6px">${m.verified?VB():'<span class="tag">Unverified</span>'}</div></div></div><div class="pc-chips"><span>${esc(m.j)}</span>${m.m?`<span>${esc(m.m)}</span>`:''}</div><p class="pc-x">${esc(m.x)}</p><div class="pc-f"><button class="btn" onclick="chatWith(${i})">Send message</button><button class="btn ol" onclick="openMember(${i})">View</button><button class="btn ol" onclick="toggleSl('${m.id}',${m.sl},V)" aria-label="${m.sl?'Remove from shortlist':'Save to shortlist'}">${m.sl?'★':'☆'}</button><button class="btn ol" onclick="reportMember(${i})" aria-label="Report ${esc(m.n)}">Report</button></div></div>`;
 let A0={v:'search'};
 const openMember=i=>{A0={v:V,a:V=='search'?A:undefined};go('member',D.members[i].id)};
 const goPage=n=>go('search',{...(A||{}),page:n});
@@ -303,7 +324,7 @@ home:()=>`<section class="hero"><div class="wrap hero-in"><div class="hero-txt">
 <div class="wrap"><div class="trust"><div><i>${ico('ok')}</i>Verified profiles</div><div><i>${ico('lock')}</i>Free to join</div><div><i>${ico('chat')}</i>Private, moderated chat</div><div><i>${ico('flag')}</i>Block and report tools</div></div></div>
 <div class="wrap sec"><h2 class="sh">Why families trust us</h2><p class="sub">A respectful place to meet, with your family's peace of mind built in.</p><div class="grid why"><div class="card"><div class="ic">${ico('ok')}</div><h3>Verified badges</h3><p class="mu">Our team checks identity, photo and background before a badge is shown.</p></div><div class="card"><div class="ic">${ico('eye')}</div><h3>Private by design</h3><p class="mu">Your photo stays hidden unless you choose to show it. Your email is never shown to members.</p></div><div class="card"><div class="ic">${ico('chat')}</div><h3>Safe conversations</h3><p class="mu">Private chat with block and report tools, and every report is reviewed by our team.</p></div><div class="card"><div class="ic">${ico('card')}</div><h3>Free to join</h3><p class="mu">Creating a profile and using the site costs nothing. We never ask for a card number or any payment.</p></div></div></div>
 <div class="wrap sec how"><h2 class="sh">How it works</h2><div class="grid"><div class="card"><h3>1. Sign in</h3><p class="mu">Continue with your Google account.</p></div><div class="card"><h3>2. Create your profile</h3><p class="mu">Tell us about yourself and what you seek.</p></div><div class="card"><h3>3. Get approved</h3><p class="mu">Our team checks every new profile. Once it is approved you can search, shortlist and message members. It is free.</p></div><div class="card"><h3>4. Connect</h3><p class="mu">Browse verified members or work with a broker.</p></div></div></div>
-${(D.featured||[]).length?`<div class="wrap sec"><h2 class="sh">Featured profiles</h2><div class="fgrid">${D.featured.map((f,k)=>`<div class="fcard"><div class="fph">${PORT(f.g,k)}<span class="fb ${f.sample?'':'v'}">${f.sample?'Sample profile':'Verified'}</span></div><div class="fbody"><b>${esc(f.n)}</b>, ${esc(f.a)}<div class="mu">${esc(f.c)}</div><div class="mu">${esc(f.j)}</div></div></div>`).join('')}</div>${D.featured.some(f=>f.sample)?'<p class="mu" style="text-align:center;margin-top:14px">Sample profiles are examples only, with illustrated portraits, shown until real members join. They cannot be contacted.</p>':''}<div class="row" style="justify-content:center;margin-top:12px"><button class="btn ol" onclick="${me?"go('search')":'login()'}">Browse members</button></div></div>`:''}
+${(D.featured||[]).length?`<div class="wrap sec"><div class="sechead"><h2 class="sh">Featured profiles</h2><p class="mu">${D.featured.some(f=>!f.sample)?'Every profile here was checked by hand by our team.':''}</p></div><div class="fgrid">${D.featured.map((f,k)=>`<article class="fcard"><div class="fcover c${k%4}">${f.sample?PORT(f.g,k)+'<span class="fs">Sample profile</span>':`<div class="fav">${esc(ini(f.n))}</div>${VB()}`}</div><div class="fbody"><b>${esc(f.n)}</b>, ${esc(f.a)}<div class="mu">${esc(f.c)}</div><div class="mu">${esc(f.j)}</div>${f.sample?'':'<ul class="fchk"><li>Identity</li><li>Photo</li><li>Background</li></ul>'}</div></article>`).join('')}</div>${D.featured.some(f=>f.sample)?'<p class="mu" style="text-align:center;margin-top:14px">Sample profiles are examples only, with illustrated portraits, shown until real members join. They cannot be contacted.</p>':''}<div class="row" style="justify-content:center;margin-top:14px"><button class="btn ol" onclick="${me?"go('search')":'login()'}">Browse members</button></div></div>`:''}
 ${(D.brokers||[]).length?`<div class="wrap sec"><div class="row sp"><h2>Trusted brokers</h2><button class="btn ol s" onclick="go('brokers')">See all</button></div><div class="grid">${D.brokers.slice(0,3).map((b,i)=>`<div class="card"><div class="row"><div class="av">${ini(b.n)}</div><div><b>${esc(b.n)}</b> <span class="tag v">Verified</span><div class="mu">${esc(b.c)}</div></div></div><button class="btn ol w" style="margin-top:12px" onclick="go('broker',${i})">View profile</button></div>`).join('')}</div></div>`:''}
 <div class="wrap sec" id="gal" hidden><h2 class="sh">Where good beginnings start</h2><div class="gal">${[1,2,3].map(n=>`<figure><img src="/img/couple-${n}.jpg" alt="A happy couple" loading="lazy" onload="document.getElementById('gal').hidden=false" onerror="this.parentNode.remove()"></figure>`).join('')}</div></div>
 <section class="band"><div class="wrap"><h2>${t('tag')}</h2><p>Verified profiles, trusted brokers and private chat for families across the globe.</p><button class="btn gd big" onclick="${me?"go('profile')":'login()'}">${t('start')}</button></div></section>`,
@@ -312,7 +333,7 @@ search:()=>{const f=A||{},mp=D.mp;return `<div class="wrap sec"><div class="row 
 ${mp?`<p class="mu">${mp.total} member${mp.total==1?'':'s'} found</p>`:''}<div class="grid">${(D.members||[]).map(mcard).join('')||(D.lock?'':'<p class="mu">No members match yet. Widen your filters or check back soon.</p>')}</div>
 ${mp&&mp.pages>1?`<div class="pg"><button class="btn ol s" ${mp.page<2?'disabled':''} onclick="goPage(${mp.page-1})">Previous</button><span class="mu">Page ${mp.page} of ${mp.pages}</span><button class="btn ol s" ${mp.page>=mp.pages?'disabled':''} onclick="goPage(${mp.page+1})">Next</button></div>`:''}</div>`},
 shortlist:()=>`<div class="wrap sec"><div class="row sp"><h2>My shortlist</h2><button class="btn ol s" onclick="go('search')">Back to search</button></div>${lockMsg()}<div class="grid">${(D.members||[]).map(mcard).join('')||(D.lock?'':'<p class="mu">Nobody saved yet. Use "Save" on a profile to keep it here.</p>')}</div></div>`,
-member:()=>{const m=D.m1;return `<div class="wrap sec"><div class="card" style="max-width:600px"><div class="row">${avt(m,'lg')}<div><h2 style="margin:0">${esc(m.n)}</h2>${m.verified?'<span class="tag v">Verified</span>':'<span class="tag">Unverified</span>'}<div class="mu">${m.a} yrs · ${esc(m.c)}</div></div></div>
+member:()=>{const m=D.m1;return `<div class="wrap sec"><div class="card" style="max-width:600px"><div class="row">${avt(m,'lg')}<div><h2 style="margin:0">${esc(m.n)}</h2>${m.verified?VB():'<span class="tag">Unverified</span>'}<div class="mu">${m.a} yrs · ${esc(m.c)}</div></div></div>
 <p style="margin-top:14px"><b>Marital status:</b> ${esc(m.m)}<br><b>Education:</b> ${esc(m.e)}<br><b>Occupation:</b> ${esc(m.j)}</p><p>${esc(m.x)}</p><p class="mu">Looking for: ${esc(m.w)}</p>
 <div class="row" style="flex-wrap:wrap"><button class="btn" style="flex:1" onclick="startChat(D.m1.id,D.m1.n,'member')">Send message</button><button class="btn ol" onclick="toggleSl('${m.id}',${m.sl},'member')">${m.sl?'Remove from shortlist':'Save'}</button><button class="btn ol" onclick="reportUser({id:D.m1.id,n:D.m1.n,source:'search'})">Report</button></div><p class="mu">Safety tip: keep conversations on the site and never send money. <a href="/safety" target="_blank" rel="noopener">Read more</a></p><button class="btn ol s" onclick="go(A0.v,A0.a)">Back</button></div></div>`},
 brokers:()=>{const L=D.brokers||[];return `<div class="wrap sec"><div class="row sp"><h2>Verified brokers</h2><button class="btn ol" onclick="${me?"go('apply')":'login()'}">Become a broker</button></div><p class="mu">Matrimonial brokers approved by our team who manage introductions on your behalf.</p><div class="grid">${L.map((b,i)=>`<div class="card"><div class="row"><div class="av">${ini(b.n)}</div><div><b>${esc(b.n)}</b> <span class="tag v">Verified</span><div class="mu">${esc(b.c)}</div><div class="mu">${esc(b.e)} experience</div>${rateLine(b.rating)}</div></div><button class="btn ol w" style="margin-top:12px" onclick="go('broker',${i})">View profile</button></div>`).join('')||'<p class="mu">No brokers have been approved yet.</p>'}</div></div>`},
