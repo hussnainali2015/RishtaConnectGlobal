@@ -173,7 +173,7 @@ app.get('/api/me', auth, (req, res) => res.json({
 const s = (v, max) => String(v || '').trim().slice(0, max);
 app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, age = parseInt(b.a, 10);
-  const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300), f: b.f === true };
+  const prof = { n: s(b.n, 60), g: b.g === 'Male' ? 'Male' : 'Female', a: age, c: s(b.c, 60), m: s(b.m, 20), e: s(b.e, 60), j: s(b.j, 60), x: s(b.x, 400), w: s(b.w, 300), f: b.f === true, fp: b.f === true && b.fp === true };
   if (!(age >= 18 && age <= 70) || !prof.n || !prof.c || !prof.e || !prof.j || !prof.x || !prof.w) return res.status(400).json({ error: 'Complete every field. Age must be 18 to 70.' });
   if (!['Never married', 'Divorced', 'Widowed'].includes(prof.m)) prof.m = 'Never married';
   if (!req.user.consent_at && b.agree !== true) return res.status(400).json({ error: 'Please accept the Terms and the Privacy Policy to continue.' });
@@ -405,13 +405,28 @@ app.post('/api/assistant', csrf, asstLimit, wrap(async (req, res) => {
 const FEATURED = 6;
 let SAMPLES = [];
 if (E.SHOW_SAMPLE_PROFILES === 'true') { try { SAMPLES = require('./featured-samples'); } catch { SAMPLES = []; } }
+// A photo goes on the public home page only if the member asked for it, set it visible, is approved and verified, and it was not flagged.
+function homePhotoOk(email, p) {
+  if (!p || p.f !== true || p.fp !== true || mstatus(email) !== 'approved' || !vstate(email).verified) return false;
+  if (!db.prepare('SELECT 1 FROM photos WHERE email=? AND visible=1').get(email)) return false;
+  const mf = db.prepare('SELECT photo_level FROM mod_flags WHERE email=?').get(email);
+  return !(mf && mf.photo_level === 'high');
+}
+app.get('/api/featured/photo/:id', (req, res) => {
+  const email = byUid(req.params.id), u = email && db.prepare('SELECT profile_json FROM users WHERE email=?').get(email);
+  let p = null; try { p = u && JSON.parse(u.profile_json); } catch { /* none */ }
+  if (!homePhotoOk(email, p)) return res.status(404).end();
+  const ph = db.prepare('SELECT data FROM photos WHERE email=?').get(email);
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+  res.end(ph.data);
+});
 app.get('/api/featured', (req, res) => {
   const real = [];
   for (const u of db.prepare("SELECT email,profile_json FROM users WHERE profile_json LIKE '%\"f\":true%' ORDER BY created_at DESC").all()) {
     if (real.length >= FEATURED) break;
     let p; try { p = JSON.parse(u.profile_json); } catch { continue; }
     if (p.f !== true || mstatus(u.email) !== 'approved' || !vstate(u.email).verified) continue;
-    real.push({ n: String(p.n || '').split(/\s+/)[0], a: p.a, c: p.c, j: p.j, g: p.g, verified: true });
+    real.push({ id: opaque(u.email), n: String(p.n || '').split(/\s+/)[0], a: p.a, c: p.c, j: p.j, g: p.g, verified: true, ph: homePhotoOk(u.email, p) });
   }
   const fill = SAMPLES.slice(0, Math.max(0, FEATURED - real.length)).map(x => ({ ...x, sample: true }));
   res.set('Cache-Control', 'no-store'); res.json([...real, ...fill]);
