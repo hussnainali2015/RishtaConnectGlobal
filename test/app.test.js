@@ -432,3 +432,166 @@ test('free registration: a new profile is usable straight away; with REQUIRE_APP
     assert.equal((await p1.get('/api/members?c=')).json.rows.some(m => m.n === 'Pending Two'), true, 'approved members appear for each other');
   } finally { T.child.kill(); T.db.close(); }
 });
+
+test('signup data is copied into the Supabase profiles table', async () => {
+  const http = require('node:http');
+  const calls = []; const store = new Map();
+  const fake = http.createServer((req, res) => {
+    let b = ''; req.on('data', d => { b += d; }); req.on('end', () => {
+      calls.push({ m: req.method, u: req.url, k: req.headers.apikey });
+      if (req.method === 'POST') for (const r of JSON.parse(b)) store.set(r.email, r);
+      if (req.method === 'DELETE') store.delete(decodeURIComponent(req.url.split('email=eq.')[1]));
+      res.writeHead(201); res.end();
+    });
+  });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const S = await startServer({ REQUIRE_APPROVAL: 'true', SUPABASE_URL: 'http://127.0.0.1:' + fake.address().port, SUPABASE_SECRET_KEY: 'sb_secret_test' });
+  try {
+    const wait = async f => { for (let i = 0; i < 40 && !f(); i++) await new Promise(r => setTimeout(r, 100)); };
+    const m = S.as('sync1@test.com', 'Sync One');
+    const r = await m.post('/api/profile', { n: 'Sync One', g: 'Male', a: 28, c: 'Riyadh', m: 'Never married', e: 'Bachelor', j: 'Engineer', x: 'About me', w: 'Looking for', agree: true });
+    assert.equal(r.status, 200);
+    await wait(() => store.get('sync1@test.com') && store.get('sync1@test.com').profile);
+    assert.equal(store.get('sync1@test.com').profile.c, 'Riyadh');
+    assert.equal(store.get('sync1@test.com').status, 'pending');
+    assert.equal(calls[0].k, 'sb_secret_test');
+    await S.as('admin@test.com').post('/api/admin/members/sync1%40test.com/approve', {});
+    await wait(() => store.get('sync1@test.com').status === 'approved');
+    assert.equal(store.get('sync1@test.com').status, 'approved');
+    await m.post('/api/account/delete', { confirm: 'DELETE' });
+    await wait(() => !store.has('sync1@test.com'));
+    assert.equal(store.has('sync1@test.com'), false);
+  } finally { await S.stop(); fake.close(); }
+});
+
+test('featured profiles: opt-in, verified only, first name only, samples labelled', async () => {
+  const S = await startServer({ REQUIRE_APPROVAL: 'true', SHOW_SAMPLE_PROFILES: 'true' });
+  try {
+    let list = await (await fetch(S.base + '/api/featured')).json();
+    assert.equal(list.length, 6); assert.ok(list.every(x => x.sample === true && !x.verified));
+    const prof = f => ({ n: 'Zainab Khan', g: 'Female', a: 26, c: 'Doha', m: 'Never married', e: 'MSc', j: 'Nurse', x: 'About', w: 'Looking', agree: true, f });
+    const m = S.as('feat1@test.com', 'Zainab Khan');
+    await m.post('/api/profile', prof(true));
+    await S.as('admin@test.com').post('/api/admin/members/feat1%40test.com/approve', {});
+    list = await (await fetch(S.base + '/api/featured')).json();
+    assert.ok(!list.some(x => !x.sample), 'not verified yet, so not shown');
+    S.db.prepare('UPDATE verification SET identity=1,photo=1,background=1 WHERE email=?').run('feat1@test.com');
+    list = await (await fetch(S.base + '/api/featured')).json();
+    assert.equal(list.length, 6); assert.equal(list[0].n, 'Zainab'); assert.equal(list[0].verified, true);
+    assert.equal(list.filter(x => x.sample).length, 5);
+    assert.ok(!JSON.stringify(list).includes('feat1@test.com') && !JSON.stringify(list).includes('Khan'));
+    await m.post('/api/profile', prof(false));
+    list = await (await fetch(S.base + '/api/featured')).json();
+    assert.ok(list.every(x => x.sample));
+  } finally { await S.stop(); }
+  const S2 = await startServer({}); // samples are off by default: only real, verified, opted-in members
+  try { assert.deepEqual(await (await fetch(S2.base + '/api/featured')).json(), []); } finally { await S2.stop(); }
+});
+
+test('admin review: details, reject with reason, resubmit, admin-only', async () => {
+  const S = await startServer({ REQUIRE_APPROVAL: 'true' });
+  try {
+    const prof = x => ({ n: 'Rev Two', g: 'Female', a: 27, c: 'Doha', m: 'Never married', e: 'MSc', j: 'Nurse', x, w: 'Looking', agree: true });
+    const m = S.as('rev2@test.com', 'Rev Two'), admin = S.as('admin@test.com');
+    await m.post('/api/profile', prof('first'));
+    assert.equal((await m.get('/api/admin/members/rev2%40test.com/review')).status, 403);
+    const r = await admin.get('/api/admin/members/rev2%40test.com/review');
+    assert.equal(r.status, 200); assert.equal(r.json.profile.x, 'first'); assert.equal(r.json.status, 'pending'); assert.equal(r.json.photo.has, false);
+    assert.equal((await admin.post('/api/admin/members/rev2%40test.com/reject', { reason: 'x' })).status, 400);
+    assert.equal((await admin.post('/api/admin/members/rev2%40test.com/reject', { reason: 'Add a clear photo' })).status, 200);
+    const me = await m.get('/api/me'); assert.equal(me.json.status, 'rejected'); assert.equal(me.json.statusReason, 'Add a clear photo');
+    assert.equal((await m.get('/api/members')).status, 403);
+    await m.post('/api/profile', prof('second'));
+    assert.equal((await m.get('/api/me')).json.status, 'pending');
+    await admin.post('/api/admin/members/rev2%40test.com/approve', {});
+    assert.equal((await admin.post('/api/admin/members/rev2%40test.com/reject', { reason: 'late' })).status, 400); // live members are suspended, not rejected
+  } finally { await S.stop(); }
+});
+
+test('automatic moderation: flags text, holds serious cases, optional AI photo check and assistant', async () => {
+  const http = require('node:http');
+  const seen = [];
+  const fake = http.createServer((req, res) => {
+    let b = ''; req.on('data', d => { b += d; }); req.on('end', () => {
+      const j = JSON.parse(b); seen.push(j);
+      const isPhoto = Array.isArray(j.messages[0].content);
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ content: [{ type: 'text', text: isPhoto ? '{"concerns":["explicit_or_revealing","made_up"],"note":"test"}' : 'Use Settings to delete your account.' }] }));
+    });
+  });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const S = await startServer({ REQUIRE_APPROVAL: 'true', ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_BASE_URL: 'http://127.0.0.1:' + fake.address().port });
+  try {
+    const prof = (x, w = 'Looking') => ({ n: 'Mod One', g: 'Male', a: 30, c: 'Doha', m: 'Never married', e: 'BSc', j: 'Engineer', x, w, agree: true });
+    const m = S.as('mod1@test.com', 'Mod One'), admin = S.as('admin@test.com');
+    await m.post('/api/profile', prof('Nice person, whatsapp me on +966 50 123 4567'));
+    let rv = (await admin.get('/api/admin/members/mod1%40test.com/review')).json;
+    assert.equal(rv.auto.level, 'medium'); assert.equal(rv.status, 'pending'); // pending only because approval is required
+    await admin.post('/api/admin/members/mod1%40test.com/approve', {});
+    await m.post('/api/profile', prof('Please send money first'));
+    rv = (await admin.get('/api/admin/members/mod1%40test.com/review')).json;
+    assert.equal(rv.auto.level, 'high'); assert.equal(rv.status, 'pending'); assert.equal(rv.reason, 'Held for a safety check');
+    assert.equal((await admin.get('/api/admin/members')).json.find(x => x.email === 'mod1@test.com').flag, 'high');
+    await admin.post('/api/admin/members/mod1%40test.com/mod/clear', {});
+    await m.post('/api/profile', prof('Please send money first')); // same text after a person cleared it: not held again
+    assert.equal((await admin.get('/api/admin/members/mod1%40test.com/review')).json.auto.cleared_by, 'admin@test.com');
+    // photo: the AI answer is read safely (unknown labels dropped), a serious one hides the photo
+    const up = await m.raw('POST', '/api/photo', dirtyJpeg(), { 'content-type': 'image/jpeg' }); assert.equal(up.status, 200);
+    await new Promise(r => setTimeout(r, 800));
+    rv = (await admin.get('/api/admin/members/mod1%40test.com/review')).json;
+    assert.equal(rv.auto.photo_level, 'high'); assert.deepEqual(rv.auto.photo.concerns, ['explicit_or_revealing']);
+    assert.equal((await m.post('/api/photo/visibility', { visible: true })).status, 409);
+    // assistant
+    const a = await S.anon().post('/api/assistant', { message: 'something odd', history: [] });
+    assert.equal(a.status, 200); assert.equal(a.json.ai, true); assert.match(a.json.reply, /Settings/);
+    assert.ok(seen.some(x => /Rishta Connect Global/.test(x.system || '')));
+    assert.equal((await S.anon().post('/api/assistant', { message: '', history: [] })).status, 400);
+  } finally { await S.stop(); fake.close(); }
+  const S2 = await startServer({});
+  try { assert.equal((await S2.anon().post('/api/assistant', { message: 'hi' })).json.ai, false); } finally { await S2.stop(); }
+});
+
+test('help knowledge base: FAQ page, JSON, and the AI assistant is told to answer only from it', async () => {
+  const http = require('node:http'); let sys = '';
+  const fake = http.createServer((req, res) => { let b = ''; req.on('data', d => { b += d; }); req.on('end', () => { sys = JSON.parse(b).system; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ content: [{ type: 'text', text: 'ok' }] })); }); });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const S = await startServer({ SUPPORT_EMAIL: 'help@example.test', ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_BASE_URL: 'http://127.0.0.1:' + fake.address().port });
+  try {
+    const page = await S.anon().get('/faq'); assert.equal(page.status, 200); assert.match(page.text, /How do I register\?/); assert.match(page.text, /help@example\.test/); assert.match(page.text, /lang="ur"/);
+    const j = (await S.anon().get('/api/faq')).json;
+    assert.ok(j.length >= 25); assert.ok(j.every(x => x.id && x.q.en && x.q.ur && x.a.en && x.a.ur && x.k.length));
+    assert.ok(new Set(j.map(x => x.id)).size === j.length, 'ids are unique');
+    assert.ok(j.some(x => x.id === 'status') && j.some(x => x.id === 'delete'));
+    await S.anon().post('/api/assistant', { message: 'how do I register?' });
+    assert.match(sys, /KNOWLEDGE:/); assert.match(sys, /Continue with Google/); assert.match(sys, /help@example\.test/); assert.match(sys, /Answer ONLY from the KNOWLEDGE/);
+    // facts in the answers match the code
+    const all = j.map(x => x.a.en).join(' ');
+    assert.match(all, /18 to 70/); assert.match(all, /200 members/); assert.match(all, /20 messages a minute/);
+  } finally { await S.stop(); fake.close(); }
+});
+
+test('home page shows the real photo of verified, featured members whose photo is visible', async () => {
+  const S = await startServer({ REQUIRE_APPROVAL: 'true' });
+  try {
+    const prof = (f) => ({ n: 'Noor Ali', g: 'Female', a: 26, c: 'Doha', m: 'Never married', e: 'MSc', j: 'Nurse', x: 'About', w: 'Looking', agree: true, f });
+    const m = S.as('hp1@test.com', 'Noor Ali'), admin = S.as('admin@test.com');
+    const find = async () => (await (await fetch(S.base + '/api/featured')).json()).find(x => x.n === 'Noor');
+    await m.post('/api/profile', prof(false));
+    await m.raw('POST', '/api/photo', dirtyJpeg(), { 'content-type': 'image/jpeg' });
+    await m.post('/api/photo/visibility', { visible: true });
+    await admin.post('/api/admin/members/hp1%40test.com/approve', {});
+    S.db.prepare('UPDATE verification SET identity=1,photo=1,background=1 WHERE email=?').run('hp1@test.com');
+    assert.equal(await find(), undefined); // not opted in to Featured
+    await m.post('/api/profile', prof(true));
+    let f = await find();
+    assert.equal(f.ph, true); // featured + visible photo => real photo
+    const r = await fetch(S.base + '/api/featured/photo/' + f.id); assert.equal(r.status, 200); assert.equal(r.headers.get('content-type'), 'image/jpeg');
+    assert.equal((await fetch(S.base + '/api/featured/photo/nonsense')).status, 404);
+    await m.post('/api/photo/visibility', { visible: false }); // hiding the photo takes it off the home page at once
+    assert.equal((await fetch(S.base + '/api/featured/photo/' + f.id)).status, 404);
+    assert.equal((await find()).ph, false);
+    await m.post('/api/photo/visibility', { visible: true });
+    S.db.prepare('UPDATE verification SET photo=0 WHERE email=?').run('hp1@test.com'); // no longer verified
+    assert.equal(await find(), undefined);
+  } finally { await S.stop(); }
+});
