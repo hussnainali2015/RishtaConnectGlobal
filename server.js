@@ -404,7 +404,7 @@ app.post('/api/assistant', csrf, asstLimit, wrap(async (req, res) => {
    Temporary sample profiles (featured-samples.js) fill the empty places while the site is new and are clearly marked as samples. --- */
 const FEATURED = 6;
 let SAMPLES = [];
-if (E.SHOW_SAMPLE_PROFILES !== 'false') { try { SAMPLES = require('./featured-samples'); } catch { SAMPLES = []; } }
+if (E.SHOW_SAMPLE_PROFILES === 'true') { try { SAMPLES = require('./featured-samples'); } catch { SAMPLES = []; } }
 app.get('/api/featured', (req, res) => {
   const real = [];
   for (const u of db.prepare("SELECT email,profile_json FROM users WHERE profile_json LIKE '%\"f\":true%' ORDER BY created_at DESC").all()) {
