@@ -7,6 +7,11 @@ const crypto = require('node:crypto');
 const os = require('node:os');
 const { startServer, dirtyJpeg } = require('./helpers');
 
+/** phone and ID checks are covered by their own test; other broker tests just record that they passed */
+function kycDone(srv, email) {
+    srv.db.prepare('INSERT OR REPLACE INTO broker_ids(email,data,uploaded_at) VALUES(?,?,?)').run(email, Buffer.from('x'), new Date().toISOString());
+}
+
 let S;
 before(async () => { S = await startServer(); });
 after(async () => { if (S) await S.stop(); });
@@ -121,8 +126,8 @@ test('chat rules: both sides need a profile (free) and approval; blocking stops 
   await b.post('/api/blocks', { user: await (async () => (await b.get('/api/chats')).json[0].with.id)() });
   assert.ok((await a.post(`/api/chats/${first.json.id}/messages`, { body: 'still there?' })).status >= 400, 'a blocked member cannot message');
   // broker
-  const bk = S.as('broker@test.com', 'Bro Ker');
-  assert.equal((await bk.post('/api/broker/apply', { n: 'Bro Ker', c: 'Riyadh', e: '5 years', l: 'Urdu', s: 'Families', x: 'Hello' })).status, 200);
+  const bk = S.as('broker@test.com', 'Bro Ker'); kycDone(S, 'broker@test.com');
+  assert.equal((await bk.post('/api/broker/apply', { n: 'Bro Ker', c: 'Riyadh', e: '5 years', l: 'Urdu', s: 'Families', x: 'Hello', ph: '+966500000001' })).status, 200);
   assert.equal((await bk.get('/api/brokers')).json.length, 0, 'pending brokers are not listed');
   const admin = S.as('admin@test.com');
   assert.equal((await admin.post('/api/admin/brokers/broker%40test.com/approve', {})).status, 200);
@@ -336,8 +341,8 @@ test('pictures are found whatever the capital letters of the file name', async (
 
 /* ---------- broker ratings and reviews ---------- */
 test('broker reviews: only members who messaged the broker, one each, edits, flags, moderation, deletion', async () => {
-  const admin = S.as('admin@test.com'), bk = S.as('rv-broker@test.com', 'Review Broker');
-  assert.equal((await bk.post('/api/broker/apply', { n: 'Review Broker', c: 'Jeddah', e: '8 years', l: 'Urdu', s: 'Families', x: 'Hello' })).status, 200);
+  const admin = S.as('admin@test.com'), bk = S.as('rv-broker@test.com', 'Review Broker'); kycDone(S, 'rv-broker@test.com');
+  assert.equal((await bk.post('/api/broker/apply', { n: 'Review Broker', c: 'Jeddah', e: '8 years', l: 'Urdu', s: 'Families', x: 'Hello', ph: '+966500000002' })).status, 200);
   const pendingId = (await S.anon().get('/api/brokers')).json.find(b => b.n === 'Review Broker');
   assert.equal(pendingId, undefined, 'a pending broker is not listed');
   assert.equal((await admin.post('/api/admin/brokers/rv-broker%40test.com/approve', {})).status, 200);
@@ -594,4 +599,120 @@ test('home page shows the real photo of verified, featured members whose photo i
     S.db.prepare('UPDATE verification SET photo=0 WHERE email=?').run('hp1@test.com'); // no longer verified
     assert.equal(await find(), undefined);
   } finally { await S.stop(); }
+});
+
+test('broker upgrade: contact number (admin only), encrypted National ID, live leads, commissions, clients', async () => {
+  const T = await startServer();
+  try {
+    const idJpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.from('NATIONAL-ID-SECRET-'.repeat(400)), Buffer.from([0xff, 0xd9])]);
+    const br = T.as('bk1@test.com', 'Broker One'), br2 = T.as('bk2@test.com', 'Broker Two'), admin = T.as('admin@test.com'), nobody = T.as('plain@test.com');
+    const form = { n: 'Broker One', c: 'Doha, Qatar', e: '5 years', l: 'Urdu, English', s: 'Gulf families', x: 'Experienced matchmaker', ph: '+974 5555 1234' };
+    // 1. no OTP any more: the old routes are gone; a contact number and the ID are all that is needed
+    assert.equal((await br.post('/api/broker/phone/send', { phone: '+97455551234' })).status, 404);
+    assert.equal((await br.post('/api/broker/apply', form)).status, 400); // ID missing
+    assert.equal((await br.raw('POST', '/api/broker/id', Buffer.from('not an image'), { 'content-type': 'image/jpeg' })).status, 400);
+    assert.equal((await br.raw('POST', '/api/broker/id', idJpg, { 'content-type': 'image/jpeg' })).status, 200);
+    assert.equal((await br.post('/api/broker/apply', { ...form, ph: 'abc' })).status, 400); // contact number is required
+    assert.equal((await br.post('/api/broker/apply', form)).status, 200);
+    const stored = T.db.prepare('SELECT data FROM broker_ids WHERE email=?').get('bk1@test.com').data;
+    assert.ok(!stored.includes('NATIONAL-ID-SECRET'), 'the ID is encrypted at rest');
+    // 2. the number is visible to administrators only
+    const list = (await admin.get('/api/admin/brokers')).json.find(x => x.email === 'bk1@test.com');
+    assert.equal(list.kyc.phone, '+97455551234'); assert.equal(list.kyc.hasId, true);
+    assert.equal((await nobody.get('/api/admin/brokers')).status, 403);
+    assert.equal((await nobody.get('/api/admin/brokers/bk1%40test.com/id')).status, 403);
+    const img = await admin.get('/api/admin/brokers/bk1%40test.com/id'); assert.equal(img.status, 200); assert.ok(img.body.equals(idJpg));
+    assert.equal((await br.get('/api/broker/dashboard')).status, 403); // not approved yet
+    assert.equal((await admin.post('/api/admin/brokers/bk1%40test.com/approve', {})).status, 200);
+    const purge = T.db.prepare('SELECT purge_at FROM broker_ids WHERE email=?').get('bk1@test.com').purge_at;
+    assert.ok(Date.parse(purge) - Date.now() > 85 * 86400_000, 'the ID is scheduled for deletion about 90 days after the decision');
+    // the number must not leak anywhere a client can look
+    const viewer = T.as('viewer@test.com', 'Viewer'); await viewer.post('/api/profile', { n: 'Viewer One', g: 'Male', a: 30, c: 'Doha', m: 'Never married', e: 'BSc', j: 'Eng', x: 'About', w: 'Looking', agree: true });
+    const everything = [(await viewer.get('/api/brokers')).text, (await viewer.get('/api/me')).text, (await br.get('/api/me')).text, (await br.get('/api/broker/kyc')).text, (await br.get('/api/broker/dashboard')).text, (await viewer.get('/api/members')).text];
+    for (const t of everything) assert.ok(!/5555 ?1234|55551234/.test(t), 'contact number must stay admin-only');
+    // 3. leads: a referral signup and a chat both show up
+    const d0 = (await br.get('/api/broker/dashboard')).json; assert.equal(d0.stats.leads, 0);
+    const prof = { n: 'Ayesha Khan', g: 'Female', a: 27, c: 'Lahore', m: 'Never married', e: 'MSc', j: 'Teacher', x: 'About', w: 'Looking', agree: true };
+    const ref = T.as('m1@test.com', 'Ayesha Khan'), chat = T.as('m2@test.com', 'Sara Ali');
+    assert.equal((await ref.post('/api/profile', { ...prof, ref: d0.refId })).status, 200);
+    assert.equal((await chat.post('/api/profile', { ...prof, n: 'Sara Ali' })).status, 200);
+    assert.equal((await chat.post('/api/chats', { to: d0.refId, body: 'Salam, I need help finding a match.' })).status, 200);
+    const d1 = (await br.get('/api/broker/dashboard')).json;
+    assert.equal(d1.stats.leads, 2); assert.equal(d1.stats.referrals, 1); assert.equal(d1.stats.new, 2);
+    assert.ok(!JSON.stringify(d1).includes('@test.com'), 'leads never expose member emails');
+    const lead = d1.leads.find(l => l.n === 'Ayesha');
+    assert.equal((await br2.post('/api/broker/leads/' + lead.id, { status: 'contacted' })).status, 403);
+    assert.equal((await br.post('/api/broker/leads/' + lead.id, { status: 'bogus' })).status, 400);
+    assert.equal((await br.post('/api/broker/leads/' + lead.id, { status: 'matched' })).status, 200);
+    assert.equal((await br.get('/api/broker/dashboard')).json.stats.matched, 1);
+    // 4. commissions are written by an admin only
+    assert.equal((await br.post('/api/admin/brokers/bk1%40test.com/commissions', { amount: 100, currency: 'USD' })).status, 403);
+    assert.equal((await admin.post('/api/admin/brokers/bk1%40test.com/commissions', { amount: -5, currency: 'USD' })).status, 400);
+    assert.equal((await admin.post('/api/admin/brokers/bk1%40test.com/commissions', { amount: 150.5, currency: 'usd', note: 'Ayesha match', lead_id: lead.id })).status, 200);
+    let d2 = (await br.get('/api/broker/dashboard')).json;
+    assert.deepEqual(d2.commission.totals, [{ currency: 'USD', pending: 150.5, paid: 0 }]);
+    assert.equal((await admin.post('/api/admin/commissions/' + d2.commission.rows[0].id, { status: 'paid' })).status, 200);
+    d2 = (await br.get('/api/broker/dashboard')).json; assert.deepEqual(d2.commission.totals, [{ currency: 'USD', pending: 0, paid: 150.5 }]);
+    // 5. private clients
+    const cl = { n: 'Hamza Raza', g: 'Male', a: 30, c: 'Karachi', ph: '+92 300 1234567', r: 'Educated, family oriented', x: 'Prefers Urdu' };
+    assert.equal((await br.post('/api/broker/clients', cl)).status, 400); // needs the client's consent
+    const made = await br.post('/api/broker/clients', { ...cl, consent: true }); assert.equal(made.status, 200);
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id, { status: 'active' })).status, 200);
+    assert.equal((await viewer.get('/api/members')).json.rows.some(r => r.managed), false); // not published, so not in search
+    assert.equal((await admin.get('/api/broker/dashboard')).status, 403);
+    // 6. a client shown on the site as a managed profile
+    const pub = { ...cl, m: 'Never married', e: 'BSc', j: 'Engineer', pa: 'Calm and family oriented.', w: 'A kind partner', consent: true, publish: true, pconsent: true };
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id, { ...pub, pconsent: false })).status, 400);
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id, { ...pub, e: '' })).status, 400);
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id, pub)).status, 200);
+    let rows = (await viewer.get('/api/members')).json.rows; const mg = rows.find(r => r.managed);
+    assert.ok(mg, 'published client appears in search'); assert.equal(mg.n, 'Hamza'); assert.equal(mg.bn, 'Broker'); assert.equal(mg.verified, false);
+    const raw = JSON.stringify(rows); assert.ok(!/1234567|Prefers Urdu|Educated, family|bk1@/.test(raw), 'private client details and the broker email never reach clients');
+    assert.equal((await viewer.get('/api/members/' + mg.id)).json.managed, true);
+    assert.equal((await viewer.get('/api/members/bm1-0000000000')).status, 404);
+    // writing to the managed profile reaches the broker, and says which profile
+    assert.equal((await viewer.post('/api/chats', { to: mg.id, body: 'Interested in this profile' })).status, 200);
+    const chats = (await viewer.get('/api/chats')).json; assert.equal(chats[0].with.kind, 'broker');
+    const msgs = (await viewer.get('/api/chats/' + chats[0].id)).json.messages; assert.match(msgs[0].body, /^Regarding the profile of Hamza \(30, Karachi\): Interested/);
+    // closing the client takes the profile down
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id, { status: 'matched' })).status, 200);
+    assert.equal((await viewer.get('/api/members')).json.rows.some(r => r.managed), false);
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id, { status: 'active' })).status, 200);
+    assert.equal((await br.post('/api/broker/clients/' + made.json.id + '/delete', {})).status, 200);
+    assert.equal((await viewer.get('/api/members')).json.rows.some(r => r.managed), false);
+    // 7. deleting the account removes everything
+    assert.equal((await br.post('/api/account/delete', { confirm: 'DELETE' })).status, 200);
+    for (const t of ['broker_contact', 'broker_ids']) assert.equal(T.db.prepare(`SELECT COUNT(*) n FROM ${t} WHERE email='bk1@test.com'`).get().n, 0);
+    assert.equal(T.db.prepare("SELECT COUNT(*) n FROM broker_leads WHERE broker='bk1@test.com'").get().n, 0);
+  } finally { await T.stop(); }
+});
+
+test('managed profiles wait for an admin when approval is on, and a broker cannot publish for another', async () => {
+  const T = await startServer({ REQUIRE_APPROVAL: 'true' });
+  try {
+    const admin = T.as('admin@test.com'), br = T.as('mb@test.com', 'Mina Broker'), viewer = T.as('v2@test.com', 'Vee');
+    kycDone(T, 'mb@test.com');
+    await br.post('/api/broker/apply', { n: 'Mina Broker', c: 'Doha', e: '3 years', l: 'Urdu', s: 'Families', x: 'Hi', ph: '+97455500000' });
+    await admin.post('/api/admin/brokers/mb%40test.com/approve', {});
+    const c = await br.post('/api/broker/clients', { n: 'Zara Noor', g: 'Female', a: 26, c: 'Doha', m: 'Never married', e: 'MA', j: 'Doctor', pa: 'Warm and caring.', w: 'A good man', consent: true, publish: true, pconsent: true });
+    await viewer.post('/api/profile', { n: 'Vee Khan', g: 'Male', a: 30, c: 'Doha', m: 'Never married', e: 'BSc', j: 'Eng', x: 'About', w: 'Looking', agree: true });
+    await admin.post('/api/admin/members/v2%40test.com/approve', {});
+    assert.equal((await viewer.get('/api/members')).json.rows.some(r => r.managed), false); // pending
+    const q = (await admin.get('/api/admin/managed')).json; assert.equal(q.length, 1); assert.equal(q[0].n, 'Zara');
+    assert.equal((await br.get('/api/admin/managed')).status, 403);
+    assert.equal((await admin.post(`/api/admin/managed/${c.json.id}/reject`, {})).status, 400); // a reason is needed
+    assert.equal((await admin.post(`/api/admin/managed/${c.json.id}/approve`, {})).status, 200);
+    assert.equal((await viewer.get('/api/members')).json.rows.filter(r => r.managed).length, 1);
+    assert.equal((await br.post(`/api/broker/clients/${c.json.id}`, { n: 'Zara Noor', status: 'active' })).status, 200);
+  } finally { await T.stop(); }
+});
+
+test('broker ID retention: expired National ID files are deleted', () => {
+  const Database = require('better-sqlite3'); const db = new Database(':memory:');
+  const noop = () => {}, app = { get: noop, post: noop };
+  const mod = require('../brokerplus')({ app, express: { raw: () => noop }, db, E: { JWT_SECRET: 'j'.repeat(48) }, scan: noop, admins: new Set(), auth: noop, csrf: noop, adminOnly: noop, wrap: noop, rateLimit: () => noop, now: () => new Date().toISOString(), audit: noop, notify: noop, opaque: noop, byUid: noop, bstatus: noop, s: noop });
+  const ins = db.prepare('INSERT INTO broker_ids(email,data,uploaded_at,purge_at) VALUES(?,?,?,?)');
+  ins.run('old@x.com', Buffer.from('a'), 'x', '2000-01-01T00:00:00.000Z'); ins.run('new@x.com', Buffer.from('b'), 'x', '2999-01-01T00:00:00.000Z'); ins.run('open@x.com', Buffer.from('c'), 'x', null);
+  assert.equal(mod.purge(), 1);
+  assert.deepEqual(db.prepare('SELECT email FROM broker_ids ORDER BY email').all().map(r => r.email), ['new@x.com', 'open@x.com']);
 });
