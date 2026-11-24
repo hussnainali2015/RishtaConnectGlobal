@@ -177,7 +177,9 @@ app.post('/api/profile', auth, csrf, wrap(async (req, res) => {
   if (!(age >= 18 && age <= 70) || !prof.n || !prof.c || !prof.e || !prof.j || !prof.x || !prof.w) return res.status(400).json({ error: 'Complete every field. Age must be 18 to 70.' });
   if (!['Never married', 'Divorced', 'Widowed'].includes(prof.m)) prof.m = 'Never married';
   if (!req.user.consent_at && b.agree !== true) return res.status(400).json({ error: 'Please accept the Terms and the Privacy Policy to continue.' });
+  const firstProfile = !req.user.profile_json;
   db.prepare('UPDATE users SET profile_json=?, consent_at=COALESCE(consent_at,?) WHERE email=?').run(JSON.stringify(prof), now(), req.user.email);
+  if (firstProfile && b.ref) bk.leadFromRef(req.user.email, b.ref); // signed up through a broker's link
   db.prepare('INSERT OR IGNORE INTO verification(email,updated_at) VALUES(?,?)').run(req.user.email, now());
   if (mstatus(req.user.email) === 'rejected') setStatus(req.user.email, 'pending', null); // sent again after fixing it
   if (E.REQUIRE_APPROVAL === 'true') db.prepare("INSERT OR IGNORE INTO member_status(email,status,updated_at) VALUES(?,'pending',?)").run(req.user.email, now()); // new profiles wait for an admin
@@ -201,7 +203,7 @@ const opaque = email => { // members never see each other's email; the id is rem
   db.prepare('INSERT OR IGNORE INTO uid_map(uid,email) VALUES(?,?)').run(uid, email);
   return uid;
 };
-const byUid = uid => { const r = db.prepare('SELECT email FROM uid_map WHERE uid=?').get(String(uid || '')); return r && r.email; };
+const byUid = uid => { const r = db.prepare('SELECT email FROM uid_map WHERE uid=?').get(String(uid || '')); return (r && r.email) || (bk ? bk.managedBroker(uid) : null); }; // the id of a broker-managed profile leads to its broker
 const audit = (admin, action, ref, reason) => db.prepare('INSERT INTO audit(admin,action,payment_id,reason,at) VALUES(?,?,?,?,?)').run(admin, action, ref, reason || null, now());
 
 /* --- member search: members with an approved profile may browse --- */
@@ -217,9 +219,12 @@ app.get('/api/members', auth, wrap(async (req, res) => {
     .filter(({ p }) => (!q.g || p.g === q.g) && (!q.m || p.m === q.m) && p.a >= lo && p.a <= hi && (!city || p.c.toLowerCase().includes(city)) && (!edu || p.e.toLowerCase().includes(edu)) && (!job || p.j.toLowerCase().includes(job)))
     .map(h => ({ ...h, v: vstate(h.email).verified }))
     .sort((a, b) => (b.v ? 1 : 0) - (a.v ? 1 : 0)); // verified members first; newest first within each group (stable sort)
-  const slice = hit.slice((page - 1) * PAGE, page * PAGE), sl = new Set(db.prepare('SELECT target FROM shortlist WHERE owner=?').all(req.user.email).map(r => r.target));
-  res.json({ total: hit.length, page, pages: Math.max(1, Math.ceil(hit.length / PAGE)),
-    rows: slice.map(({ email, p, v }) => ({ id: opaque(email), n: p.n, g: p.g, a: p.a, c: p.c, m: p.m, j: p.j, x: p.x, verified: v, ph: !!db.prepare('SELECT 1 FROM photos WHERE email=? AND visible=1').get(email), sl: sl.has(email) })) });
+  const mg = bk.managed().filter(p => p._broker !== req.user.email && !isBlocked(req.user.email, p._broker)) // profiles a broker manages come after the members
+    .filter(p => (!q.g || p.g === q.g) && (!q.m || p.m === q.m) && p.a >= lo && p.a <= hi && (!city || String(p.c).toLowerCase().includes(city)) && (!edu || String(p.e).toLowerCase().includes(edu)) && (!job || String(p.j).toLowerCase().includes(job)));
+  const items = [...hit.map(h => ({ h })), ...mg.map(g => ({ g }))];
+  const slice = items.slice((page - 1) * PAGE, page * PAGE), sl = new Set(db.prepare('SELECT target FROM shortlist WHERE owner=?').all(req.user.email).map(r => r.target));
+  res.json({ total: items.length, page, pages: Math.max(1, Math.ceil(items.length / PAGE)),
+    rows: slice.map(it => { if (it.g) { const { _broker, ...pub } = it.g; return pub; } const { email, p, v } = it.h; return { id: opaque(email), n: p.n, g: p.g, a: p.a, c: p.c, m: p.m, j: p.j, x: p.x, verified: v, ph: !!db.prepare('SELECT 1 FROM photos WHERE email=? AND visible=1').get(email), sl: sl.has(email) }; }) });
 }));
 
 /* --- admin: verification queue --- */
@@ -364,16 +369,21 @@ app.post('/api/admin/members/:email/approve', auth, adminOnly, csrf, wrap(async 
 /* ================= brokers ================= */
 function bstatus(email) { const r = db.prepare('SELECT status FROM brokers WHERE email=?').get(email); return r ? r.status : null; }
 function binfo(email) { return db.prepare('SELECT status,reason FROM brokers WHERE email=?').get(email) || null; }
-const setBroker = (email, status, reason) => db.prepare('UPDATE brokers SET status=?, reason=?, updated_at=? WHERE email=?').run(status, reason || null, now(), email);
+const setBroker = (email, status, reason) => { const r = db.prepare('UPDATE brokers SET status=?, reason=?, updated_at=? WHERE email=?').run(status, reason || null, now(), email); bk.decided(email, status); return r; };
+const bk = require('./brokerplus')({ app, express, db, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, bstatus, s, scan: mod.scanProfile, admins }); // contact number, National ID, leads, commissions, clients, managed profiles
 
 // Anyone signed in can apply; nobody is listed or shown as Verified until an admin approves.
 app.post('/api/broker/apply', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, prof = { n: s(b.n, 60), c: s(b.c, 60), e: s(b.e, 30), l: s(b.l, 60), s: s(b.s, 120), x: s(b.x, 400) };
   if (Object.values(prof).some(v => !v)) return res.status(400).json({ error: 'Complete every field.' });
+  const phone = bk.cleanPhone(b.ph); // kept apart from the public broker profile: only administrators ever see it
+  if (!phone) return res.status(400).json({ error: 'Enter your contact number with the country code, for example +923001234567.' });
+  if (!bk.kyc(req.user.email).hasId) return res.status(400).json({ error: 'Upload a clear picture of your National ID first.' });
   const cur = bstatus(req.user.email);
   if (cur === 'approved' || cur === 'suspended') return res.status(409).json({ error: 'Your broker account is ' + cur + '.' });
   db.prepare("INSERT INTO brokers(email,profile_json,status,created_at,updated_at) VALUES(?,?, 'pending',?,?) ON CONFLICT(email) DO UPDATE SET profile_json=excluded.profile_json, status='pending', reason=NULL, updated_at=excluded.updated_at")
     .run(req.user.email, JSON.stringify(prof), now(), now());
+  bk.saveContact(req.user.email, phone);
   res.json({ ok: true });
 }));
 /* --- in-app help assistant: the page answers common questions itself; this route is the optional AI for everything else --- */
@@ -438,7 +448,7 @@ app.get('/api/brokers', (req, res) => { // public list: approved brokers only, n
 });
 app.get('/api/admin/brokers', auth, adminOnly, (req, res) => {
   const rows = db.prepare('SELECT * FROM brokers ORDER BY created_at DESC').all();
-  res.json(rows.map(r => ({ email: r.email, status: r.status, reason: r.reason, ...JSON.parse(r.profile_json) })));
+  res.json(rows.map(r => ({ email: r.email, status: r.status, reason: r.reason, ...JSON.parse(r.profile_json), ...bk.adminInfo(r.email) })));
 });
 const bTarget = (req, res) => {
   const r = db.prepare('SELECT email,status FROM brokers WHERE email=?').get(String(req.params.email || '').toLowerCase());
@@ -514,13 +524,15 @@ app.get('/api/chats', auth, (req, res) => {
   res.json(out);
 });
 app.post('/api/chats', auth, csrf, sendLimit, wrap(async (req, res) => { // start a conversation with the first message
-  const to = byUid(req.body && req.body.to), body = cleanBody(req.body && req.body.body);
+  const to = byUid(req.body && req.body.to); let body = cleanBody(req.body && req.body.body);
   if (!to) return res.status(404).json({ error: 'Recipient not found' });
   if (!body) return res.status(400).json({ error: 'Write a message first' });
+  const mp = bk.managedCard(req.body.to); // writing about a broker-managed profile goes to its broker, and says which profile
+  if (mp) body = `Regarding the profile of ${mp.n} (${mp.a}, ${mp.c}): ` + body;
   const [u1, u2] = pair(req.user.email, to);
   let c = db.prepare('SELECT * FROM conversations WHERE u1=? AND u2=?').get(u1, u2);
   const err = gate(req.user.email, to, !!c); if (err) return res.status(403).json({ error: err });
-  if (!c) c = { id: Number(db.prepare('INSERT INTO conversations(u1,u2,created_at) VALUES(?,?,?)').run(u1, u2, now()).lastInsertRowid) };
+  if (!c) { c = { id: Number(db.prepare('INSERT INTO conversations(u1,u2,created_at) VALUES(?,?,?)').run(u1, u2, now()).lastInsertRowid) }; bk.leadFromChat(req.user.email, to); } // a member who writes to a broker becomes that broker's lead
   markRead(c.id, req.user.email, addMsg(c.id, req.user.email, body));
   res.json({ id: c.id });
 }));
@@ -798,7 +810,7 @@ app.post('/api/admin/backups/run', auth, adminOnly, csrf, wrap(async (req, res) 
 }));
 
 require('./reviews')({ app, db, jwt, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, mstatus, bstatus, isBlocked, s });
-require('./extras')({ app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, whoIs, admins, ps, modPhoto });
+require('./extras')({ bk, app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, whoIs, admins, ps, modPhoto });
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), { dotfiles: 'allow' })); // e.g. Apple's domain-association file, if Apple asks for one
 const IMG_DIR = path.join(__dirname, 'public', 'img');
