@@ -35,7 +35,7 @@ function cleanJpeg(buf) {
 }
 
 module.exports = function (x) {
-  const { app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, admins, ps, modPhoto } = x;
+  const { bk, app, express, db, auth, csrf, adminOnly, wrap, rateLimit, crypto, E, now, audit, notify, opaque, byUid, mstatus, vstate, isBlocked, admins, ps, modPhoto } = x;
   const cfg = {
     name: E.BUSINESS_NAME || 'Rishta Connect Global', email: E.SUPPORT_EMAIL || '', reviewed: E.LEGAL_REVIEWED === 'true',
     juris: E.LEGAL_JURISDICTION || 'the laws of the country where the operator of this website is established', backupDays: String(parseInt(E.BACKUP_KEEP, 10) || 14),
@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
   };
   app.get('/api/members/:id', auth, wrap(async (req, res) => {
     if (!needActive(req, res)) return;
+    if (/^bm/.test(req.params.id)) { const m = bk.managedCard(req.params.id); return m ? res.json(m) : res.status(404).json({ error: 'This profile is unavailable.' }); } // managed by a broker
     const email = byUid(req.params.id);
     if (!email || !visible(req.user.email, email)) return res.status(404).json({ error: 'This member is unavailable.' });
     res.json(card(req.user.email, email));
@@ -186,7 +187,7 @@ CREATE TABLE IF NOT EXISTS shortlist(owner TEXT NOT NULL, target TEXT NOT NULL, 
     db.transaction(() => {
       const cids = db.prepare('SELECT id FROM conversations WHERE u1=? OR u2=?').all(em, em).map(r => r.id);
       for (const id of cids) { db.prepare('DELETE FROM messages WHERE conv_id=?').run(id); db.prepare('DELETE FROM conv_reads WHERE conv_id=?').run(id); db.prepare('DELETE FROM conversations WHERE id=?').run(id); }
-      for (const [t, col] of [['photos', 'email'], ['mod_flags', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked']]) { if (db.prepare('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(t)) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em); }
+      for (const [t, col] of [['photos', 'email'], ['mod_flags', 'email'], ['verification', 'email'], ['member_status', 'email'], ['brokers', 'email'], ['uid_map', 'email'], ['notifications', 'email'], ['warnings', 'email'], ['appeals', 'email'], ['conv_reads', 'email'], ['broker_reviews', 'reviewer'], ['broker_reviews', 'broker'], ['review_flags', 'reporter'], ['shortlist', 'owner'], ['shortlist', 'target'], ['blocks', 'blocker'], ['blocks', 'blocked'], ['broker_phone', 'email'], ['broker_contact', 'email'], ['broker_ids', 'email'], ['broker_leads', 'broker'], ['broker_leads', 'member'], ['broker_clients', 'broker'], ['broker_commissions', 'broker']]) { if (db.prepare('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(t)) db.prepare('DELETE FROM ' + t + ' WHERE ' + col + '=?').run(em); }
       if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='review_flags'").get()) db.prepare('DELETE FROM review_flags WHERE review_id NOT IN (SELECT id FROM broker_reviews)').run();
       for (const t of ['memberships', 'payments']) if (db.prepare('SELECT 1 FROM sqlite_master WHERE name=?').get(t)) // left over from before the site became free: old records are removed or made anonymous
         t === 'memberships' ? db.prepare('DELETE FROM memberships WHERE email=?').run(em) : db.prepare('UPDATE payments SET email=? WHERE email=?').run(g, em);
