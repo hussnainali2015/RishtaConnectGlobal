@@ -9,7 +9,8 @@ const { startServer, dirtyJpeg } = require('./helpers');
 
 /** phone and ID checks are covered by their own test; other broker tests just record that they passed */
 function kycDone(srv, email) {
-    srv.db.prepare('INSERT OR REPLACE INTO broker_ids(email,data,uploaded_at) VALUES(?,?,?)').run(email, Buffer.from('x'), new Date().toISOString());
+    srv.db.prepare('INSERT OR REPLACE INTO broker_photos(email,data,uploaded_at) VALUES(?,?,?)').run(email, Buffer.from('x'), new Date().toISOString());
+  srv.db.prepare('INSERT OR REPLACE INTO broker_ids(email,data,uploaded_at) VALUES(?,?,?)').run(email, Buffer.from('x'), new Date().toISOString());
 }
 
 let S;
@@ -127,7 +128,7 @@ test('chat rules: both sides need a profile (free) and approval; blocking stops 
   assert.ok((await a.post(`/api/chats/${first.json.id}/messages`, { body: 'still there?' })).status >= 400, 'a blocked member cannot message');
   // broker
   const bk = S.as('broker@test.com', 'Bro Ker'); kycDone(S, 'broker@test.com');
-  assert.equal((await bk.post('/api/broker/apply', { n: 'Bro Ker', c: 'Riyadh', e: '5 years', l: 'Urdu', s: 'Families', x: 'Hello', ph: '+966500000001' })).status, 200);
+  assert.equal((await bk.post('/api/broker/apply', { n: 'Bro Ker', c: 'Riyadh', e: '5 years', l: 'Urdu', s: 'Families', x: 'Hello', ph: '+966500000001', pp: 'JazzCash', pn: '0300 1234567' })).status, 200);
   assert.equal((await bk.get('/api/brokers')).json.length, 0, 'pending brokers are not listed');
   const admin = S.as('admin@test.com');
   assert.equal((await admin.post('/api/admin/brokers/broker%40test.com/approve', {})).status, 200);
@@ -342,7 +343,7 @@ test('pictures are found whatever the capital letters of the file name', async (
 /* ---------- broker ratings and reviews ---------- */
 test('broker reviews: only members who messaged the broker, one each, edits, flags, moderation, deletion', async () => {
   const admin = S.as('admin@test.com'), bk = S.as('rv-broker@test.com', 'Review Broker'); kycDone(S, 'rv-broker@test.com');
-  assert.equal((await bk.post('/api/broker/apply', { n: 'Review Broker', c: 'Jeddah', e: '8 years', l: 'Urdu', s: 'Families', x: 'Hello', ph: '+966500000002' })).status, 200);
+  assert.equal((await bk.post('/api/broker/apply', { n: 'Review Broker', c: 'Jeddah', e: '8 years', l: 'Urdu', s: 'Families', x: 'Hello', ph: '+966500000002', pp: 'EasyPaisa', pn: '03451234567' })).status, 200);
   const pendingId = (await S.anon().get('/api/brokers')).json.find(b => b.n === 'Review Broker');
   assert.equal(pendingId, undefined, 'a pending broker is not listed');
   assert.equal((await admin.post('/api/admin/brokers/rv-broker%40test.com/approve', {})).status, 200);
@@ -606,14 +607,22 @@ test('broker upgrade: contact number (admin only), encrypted National ID, live l
   try {
     const idJpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.from('NATIONAL-ID-SECRET-'.repeat(400)), Buffer.from([0xff, 0xd9])]);
     const br = T.as('bk1@test.com', 'Broker One'), br2 = T.as('bk2@test.com', 'Broker Two'), admin = T.as('admin@test.com'), nobody = T.as('plain@test.com');
-    const form = { n: 'Broker One', c: 'Doha, Qatar', e: '5 years', l: 'Urdu, English', s: 'Gulf families', x: 'Experienced matchmaker', ph: '+974 5555 1234' };
+    const form = { n: 'Broker One', c: 'Doha, Qatar', e: '5 years', l: 'Urdu, English', s: 'Gulf families', x: 'Experienced matchmaker', ph: '+974 5555 1234', pp: 'JazzCash', pn: '0300-1234567' };
     // 1. no OTP any more: the old routes are gone; a contact number and the ID are all that is needed
     assert.equal((await br.post('/api/broker/phone/send', { phone: '+97455551234' })).status, 404);
     assert.equal((await br.post('/api/broker/apply', form)).status, 400); // ID missing
     assert.equal((await br.raw('POST', '/api/broker/id', Buffer.from('not an image'), { 'content-type': 'image/jpeg' })).status, 400);
     assert.equal((await br.raw('POST', '/api/broker/id', idJpg, { 'content-type': 'image/jpeg' })).status, 200);
+    // the profile picture is required too, and must really be an image
+    assert.equal((await br.post('/api/broker/apply', form)).status, 400);
+    assert.equal((await br.raw('POST', '/api/broker/photo', Buffer.from('<html>not a picture</html>'.repeat(20)), { 'content-type': 'image/jpeg' })).status, 400);
+    assert.ok((await br.raw('POST', '/api/broker/photo', Buffer.from('plain text'), { 'content-type': 'text/plain' })).status >= 400); // wrong file type is refused
+    assert.equal((await br.get('/api/broker/kyc')).json.hasPhoto, false);
+    assert.equal((await br.raw('POST', '/api/broker/photo', dirtyJpeg(), { 'content-type': 'image/jpeg' })).status, 200);
+    assert.equal((await br.get('/api/broker/kyc')).json.hasPhoto, true);
     assert.equal((await br.post('/api/broker/apply', { ...form, ph: 'abc' })).status, 400); // contact number is required
     assert.equal((await br.post('/api/broker/apply', form)).status, 200);
+    assert.equal((await T.as('anyone@test.com', 'Any').get('/api/brokers')).json.length, 0); // not public until approved
     const stored = T.db.prepare('SELECT data FROM broker_ids WHERE email=?').get('bk1@test.com').data;
     assert.ok(!stored.includes('NATIONAL-ID-SECRET'), 'the ID is encrypted at rest');
     // 2. the number is visible to administrators only
@@ -626,6 +635,10 @@ test('broker upgrade: contact number (admin only), encrypted National ID, live l
     assert.equal((await admin.post('/api/admin/brokers/bk1%40test.com/approve', {})).status, 200);
     const purge = T.db.prepare('SELECT purge_at FROM broker_ids WHERE email=?').get('bk1@test.com').purge_at;
     assert.ok(Date.parse(purge) - Date.now() > 85 * 86400_000, 'the ID is scheduled for deletion about 90 days after the decision');
+    const pubB = (await nobody.get('/api/brokers')).json[0]; assert.equal(pubB.photo, true);
+    const pp = await nobody.get(`/api/brokers/${pubB.id}/photo`); assert.equal(pp.status, 200); assert.equal(pp.headers.get('content-type'), 'image/jpeg');
+    assert.equal((await nobody.get('/api/brokers/nonsense/photo')).status, 404);
+    assert.equal((await br.raw('POST', '/api/broker/photo', dirtyJpeg(), { 'content-type': 'image/jpeg' })).status, 409); // an approved broker's picture changes only through support
     // the number must not leak anywhere a client can look
     const viewer = T.as('viewer@test.com', 'Viewer'); await viewer.post('/api/profile', { n: 'Viewer One', g: 'Male', a: 30, c: 'Doha', m: 'Never married', e: 'BSc', j: 'Eng', x: 'About', w: 'Looking', agree: true });
     const everything = [(await viewer.get('/api/brokers')).text, (await viewer.get('/api/me')).text, (await br.get('/api/me')).text, (await br.get('/api/broker/kyc')).text, (await br.get('/api/broker/dashboard')).text, (await viewer.get('/api/members')).text];
@@ -692,7 +705,7 @@ test('managed profiles wait for an admin when approval is on, and a broker canno
   try {
     const admin = T.as('admin@test.com'), br = T.as('mb@test.com', 'Mina Broker'), viewer = T.as('v2@test.com', 'Vee');
     kycDone(T, 'mb@test.com');
-    await br.post('/api/broker/apply', { n: 'Mina Broker', c: 'Doha', e: '3 years', l: 'Urdu', s: 'Families', x: 'Hi', ph: '+97455500000' });
+    await br.post('/api/broker/apply', { n: 'Mina Broker', c: 'Doha', e: '3 years', l: 'Urdu', s: 'Families', x: 'Hi', ph: '+97455500000', pp: 'JazzCash', pn: '03001234567' });
     await admin.post('/api/admin/brokers/mb%40test.com/approve', {});
     const c = await br.post('/api/broker/clients', { n: 'Zara Noor', g: 'Female', a: 26, c: 'Doha', m: 'Never married', e: 'MA', j: 'Doctor', pa: 'Warm and caring.', w: 'A good man', consent: true, publish: true, pconsent: true });
     await viewer.post('/api/profile', { n: 'Vee Khan', g: 'Male', a: 30, c: 'Doha', m: 'Never married', e: 'BSc', j: 'Eng', x: 'About', w: 'Looking', agree: true });
@@ -715,4 +728,111 @@ test('broker ID retention: expired National ID files are deleted', () => {
   ins.run('old@x.com', Buffer.from('a'), 'x', '2000-01-01T00:00:00.000Z'); ins.run('new@x.com', Buffer.from('b'), 'x', '2999-01-01T00:00:00.000Z'); ins.run('open@x.com', Buffer.from('c'), 'x', null);
   assert.equal(mod.purge(), 1);
   assert.deepEqual(db.prepare('SELECT email FROM broker_ids ORDER BY email').all().map(r => r.email), ['new@x.com', 'open@x.com']);
+});
+
+test('broker milestones: confirmed completed proposals, tiers at 50/100/150/200, notices and awards', async () => {
+  const T = await startServer();
+  try {
+    const admin = T.as('admin@test.com'), br = T.as('ms@test.com', 'Mila Broker'), other = T.as('other@test.com', 'Other');
+    kycDone(T, 'ms@test.com');
+    await br.post('/api/broker/apply', { n: 'Mila Broker', c: 'Doha', e: '4 years', l: 'Urdu', s: 'Families', x: 'Hi', ph: '+97455500001', pp: 'EasyPaisa', pn: '03001234567' });
+    await admin.post('/api/admin/brokers/ms%40test.com/approve', {});
+    const seed = n => { const ins = T.db.prepare("INSERT INTO broker_completions(broker,source,ref_id,label,status,created_at) VALUES('ms@test.com','seed',?,'x','confirmed',?)"); const base = T.db.prepare('SELECT COUNT(*) n FROM broker_completions').get().n; for (let i = 0; i < n; i++) ins.run(100000 + base + i, new Date().toISOString()); };
+    const complete = async (label) => { // the broker adds a client and marks it matched, then an admin confirms
+      const c = await br.post('/api/broker/clients', { n: label, g: 'Male', a: 30, c: 'Doha', consent: true });
+      assert.equal((await br.post('/api/broker/clients/' + c.json.id, { status: 'matched' })).status, 200);
+      const q = (await admin.get('/api/admin/completions')).json.find(x => x.label === label); assert.ok(q, 'waits for confirmation');
+      return q;
+    };
+    let m = (await br.get('/api/broker/dashboard')).json.milestones;
+    assert.equal(m.completed, 0); assert.equal(m.next.at, 50); assert.equal(m.next.remaining, 50); assert.equal(m.tiers.length, 4); assert.deepEqual(m.tiers.map(t => t.at), [50, 100, 150, 200]);
+    // a broker cannot confirm their own; an unconfirmed match does not count
+    const q1 = await complete('Hamza');
+    assert.equal((await br.post(`/api/admin/completions/${q1.id}/confirm`, {})).status, 403);
+    m = (await br.get('/api/broker/dashboard')).json.milestones; assert.equal(m.completed, 0); assert.equal(m.pending, 1);
+    // taking the match back removes it from the queue
+    const cid = T.db.prepare("SELECT ref_id FROM broker_completions WHERE id=?").get(q1.id).ref_id;
+    assert.equal((await br.post('/api/broker/clients/' + cid, { status: 'active' })).status, 200);
+    assert.equal((await admin.get('/api/admin/completions')).json.length, 0);
+    // 24 confirmed, then a 25th: halfway notice
+    seed(24); const q2 = await complete('Ali');
+    assert.equal((await admin.post(`/api/admin/completions/${q2.id}/confirm`, {})).status, 200);
+    m = (await br.get('/api/broker/dashboard')).json.milestones; assert.equal(m.completed, 25); assert.equal(m.next.remaining, 25); assert.equal(m.next.pct, 50); assert.equal(m.current, null);
+    const notes = async () => (await br.get('/api/notifications')).json;
+    assert.match(JSON.stringify(await notes()), /25 more to Bronze/);
+    // reaching 50 makes the broker eligible, notifies, and shows a public badge
+    seed(24); const q3 = await complete('Omar');
+    assert.equal((await admin.post(`/api/admin/completions/${q3.id}/confirm`, {})).status, 200);
+    m = (await br.get('/api/broker/dashboard')).json.milestones; assert.equal(m.completed, 50); assert.equal(m.current.name, 'Bronze'); assert.equal(m.next.at, 100);
+    assert.equal(m.tiers[0].reached, true); assert.equal(m.tiers[0].award.status, 'eligible'); assert.equal(m.tiers[1].reached, false);
+    assert.match(JSON.stringify(await notes()), /You reached Bronze/);
+    const pubList = (await other.get('/api/brokers')).json; assert.equal(pubList[0].tier.name, 'Bronze');
+    assert.ok(!/\bcompleted\b/.test(JSON.stringify(pubList)), 'the exact count is not public');
+    // the same tier is never announced twice
+    const before = JSON.stringify(await notes()).split('You reached Bronze').length;
+    seed(1); const q4 = await complete('Zain'); await admin.post(`/api/admin/completions/${q4.id}/confirm`, {});
+    assert.equal(JSON.stringify(await notes()).split('You reached Bronze').length, before);
+    // the admin records the award
+    assert.equal((await br.post('/api/admin/awards/ms%40test.com/1', { status: 'granted' })).status, 403);
+    assert.equal((await admin.post('/api/admin/awards/ms%40test.com/2', { status: 'granted' })).status, 404); // Silver not reached
+    assert.equal((await admin.post('/api/admin/awards/ms%40test.com/1', { status: 'granted', note: 'Certificate sent' })).status, 200);
+    m = (await br.get('/api/broker/dashboard')).json.milestones; assert.equal(m.tiers[0].award.status, 'granted'); assert.equal(m.tiers[0].award.note, 'Certificate sent');
+    // jump to the top tiers
+    seed(150); const q5 = await complete('Yusuf'); await admin.post(`/api/admin/completions/${q5.id}/confirm`, {});
+    m = (await br.get('/api/broker/dashboard')).json.milestones; assert.equal(m.current.name, 'Platinum'); assert.equal(m.next, null); assert.equal(m.tiers.filter(t => t.award).length, 4);
+  } finally { await T.stop(); }
+});
+
+test('broker challenge: payout details (admin only), 15 verified profiles in 90 days, leaderboard, manual 1000 PKR reward', async () => {
+  const T = await startServer();
+  try {
+    const admin = T.as('admin@test.com'), br = T.as('ch@test.com', 'Chaudhry Broker'), rival = T.as('rv9@test.com', 'Rival Broker'), nobody = T.as('nb@test.com', 'Nobody');
+    kycDone(T, 'ch@test.com'); kycDone(T, 'rv9@test.com');
+    const form = { n: 'Chaudhry Broker', c: 'Lahore', e: '3 years', l: 'Urdu', s: 'Families', x: 'Hi', ph: '+923001110000' };
+    // payout details are mandatory and validated
+    assert.equal((await br.post('/api/broker/apply', form)).status, 400);
+    assert.equal((await br.post('/api/broker/apply', { ...form, pp: 'PayPal', pn: '03001234567' })).status, 400);
+    assert.equal((await br.post('/api/broker/apply', { ...form, pp: 'JazzCash', pn: '12345' })).status, 400);
+    assert.equal((await br.post('/api/broker/apply', { ...form, pp: 'JazzCash', pn: '+92 300 1234567' })).status, 200);
+    assert.equal((await rival.post('/api/broker/apply', { ...form, n: 'Rival Broker', pp: 'EasyPaisa', pn: '03451112222' })).status, 200);
+    assert.equal((await admin.post('/api/admin/brokers/ch%40test.com/approve', {})).status, 200);
+    assert.equal((await admin.post('/api/admin/brokers/rv9%40test.com/approve', {})).status, 200);
+    // the admin sees each broker's payout details; nobody else does
+    const list = (await admin.get('/api/admin/brokers')).json.find(x => x.email === 'ch@test.com');
+    assert.deepEqual(list.payout, { provider: 'JazzCash', number: '03001234567', verified: false });
+    assert.equal(list.challenge.target, 15);
+    for (const t of [(await nobody.get('/api/brokers')).text, (await nobody.get('/api/members')).text, (await nobody.get('/api/me')).text, (await rival.get('/api/broker/dashboard')).text]) assert.ok(!/03001234567/.test(t), 'payout number stays private');
+    assert.equal((await nobody.get('/api/admin/challenge')).status, 403);
+    // a fresh challenge: 0 of 15, 90 days
+    const d0 = (await br.get('/api/broker/dashboard')).json; assert.equal(d0.challenge.count, 0); assert.equal(d0.challenge.target, 15); assert.equal(d0.challenge.status, 'active'); assert.equal(d0.challenge.rewardPkr, 1000); assert.ok(d0.challenge.daysLeft >= 89);
+    assert.equal(d0.payout.provider, 'JazzCash');
+    // members who join through the broker's link count once an administrator has fully verified them
+    const prof = n => ({ n, g: 'Female', a: 27, c: 'Lahore', m: 'Never married', e: 'MSc', j: 'Teacher', x: 'About', w: 'Looking', agree: true });
+    const ver = (email, all = true, at = new Date().toISOString()) => T.db.prepare('INSERT OR REPLACE INTO verification(email,identity,photo,background,updated_at) VALUES(?,?,?,?,?)').run(email, 1, 1, all ? 1 : 0, at);
+    for (let i = 1; i <= 14; i++) { const m = T.as(`mem${i}@test.com`, `Member ${i}`); assert.equal((await m.post('/api/profile', { ...prof('Member ' + i), ref: d0.refId })).status, 200); ver(`mem${i}@test.com`); }
+    const half = T.as('half@test.com', 'Half'); await half.post('/api/profile', { ...prof('Half'), ref: d0.refId }); ver('half@test.com', false); // only two of three checks
+    const chat = T.as('chatter@test.com', 'Chatter'); await chat.post('/api/profile', prof('Chatter')); await chat.post('/api/chats', { to: d0.refId, body: 'Hello broker' }); ver('chatter@test.com'); // came by chat, not by link
+    let d1 = (await br.get('/api/broker/dashboard')).json; assert.equal(d1.challenge.count, 14); assert.equal(d1.challenge.remaining, 1); assert.equal(d1.challenge.status, 'active');
+    assert.equal(d1.leaderboard.me.rank, 1); assert.equal(d1.leaderboard.top[0].name, 'Chaudhry'); assert.ok(!JSON.stringify(d1.leaderboard).includes('@'));
+    // the 15th verified profile completes the challenge
+    const m15 = T.as('mem15@test.com', 'Member 15'); await m15.post('/api/profile', { ...prof('Member 15'), ref: d0.refId }); ver('mem15@test.com');
+    const d2 = (await br.get('/api/broker/dashboard')).json; assert.equal(d2.challenge.count, 15); assert.equal(d2.challenge.status, 'completed'); assert.equal(d2.challenge.reward.status, 'eligible');
+    assert.match(JSON.stringify((await br.get('/api/notifications')).json), /Challenge complete/);
+    assert.match(JSON.stringify((await admin.get('/api/notifications')).json), /completed the challenge/);
+    // the reward is paid by hand, only after the payout number was phone-verified
+    assert.equal((await br.post('/api/admin/brokers/ch%40test.com/reward', { status: 'paid' })).status, 403);
+    assert.equal((await admin.post('/api/admin/brokers/ch%40test.com/reward', { status: 'paid' })).status, 409);
+    assert.equal((await admin.post('/api/admin/brokers/rv9%40test.com/reward', { status: 'paid' })).status, 409); // rival has not completed it
+    assert.equal((await admin.post('/api/admin/brokers/ch%40test.com/payout-verify', { verified: true })).status, 200);
+    assert.equal((await br.post('/api/broker/payout', { pp: 'EasyPaisa', pn: '03451234567' })).status, 200); // changing the details cancels the phone check
+    assert.equal((await admin.post('/api/admin/brokers/ch%40test.com/reward', { status: 'paid' })).status, 409);
+    assert.equal((await admin.post('/api/admin/brokers/ch%40test.com/payout-verify', { verified: true })).status, 200);
+    assert.equal((await admin.post('/api/admin/brokers/ch%40test.com/reward', { status: 'paid', note: 'Sent by EasyPaisa' })).status, 200);
+    const ac = (await admin.get('/api/admin/challenge')).json; const row = ac.rows.find(r => r.email === 'ch@test.com');
+    assert.equal(ac.rewardPkr, 1000); assert.equal(row.ch.reward.status, 'paid'); assert.deepEqual([row.payout.provider, row.payout.number, row.payout.verified], ['EasyPaisa', '03451234567', true]);
+    // it ends after 90 days: profiles verified before the window or after it do not count, and the challenge expires
+    T.db.prepare("UPDATE broker_challenge SET ends_at=? WHERE broker='rv9@test.com'").run(new Date(Date.now() - 1000).toISOString());
+    assert.equal((await rival.get('/api/broker/dashboard')).json.challenge.status, 'expired');
+    assert.equal((await rival.get('/api/broker/dashboard')).json.challenge.remaining, 15);
+  } finally { await T.stop(); }
 });
