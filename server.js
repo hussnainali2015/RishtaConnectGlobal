@@ -370,20 +370,24 @@ app.post('/api/admin/members/:email/approve', auth, adminOnly, csrf, wrap(async 
 function bstatus(email) { const r = db.prepare('SELECT status FROM brokers WHERE email=?').get(email); return r ? r.status : null; }
 function binfo(email) { return db.prepare('SELECT status,reason FROM brokers WHERE email=?').get(email) || null; }
 const setBroker = (email, status, reason) => { const r = db.prepare('UPDATE brokers SET status=?, reason=?, updated_at=? WHERE email=?').run(status, reason || null, now(), email); bk.decided(email, status); return r; };
-const bk = require('./brokerplus')({ app, express, db, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, bstatus, s, scan: mod.scanProfile, admins }); // contact number, National ID, leads, commissions, clients, managed profiles
+const bk = require('./brokerplus')({ app, express, db, E, auth, csrf, adminOnly, wrap, rateLimit, now, audit, notify, opaque, byUid, bstatus, s, scan: mod.scanProfile, admins, mstatus }); // contact number, National ID, leads, commissions, clients, managed profiles
 
 // Anyone signed in can apply; nobody is listed or shown as Verified until an admin approves.
 app.post('/api/broker/apply', auth, csrf, wrap(async (req, res) => {
   const b = req.body || {}, prof = { n: s(b.n, 60), c: s(b.c, 60), e: s(b.e, 30), l: s(b.l, 60), s: s(b.s, 120), x: s(b.x, 400) };
   if (Object.values(prof).some(v => !v)) return res.status(400).json({ error: 'Complete every field.' });
+  const pay = bk.checkPayout(b); // JazzCash or EasyPaisa number for the challenge reward: administrators only
+  if (pay.error) return res.status(400).json({ error: pay.error });
   const phone = bk.cleanPhone(b.ph); // kept apart from the public broker profile: only administrators ever see it
   if (!phone) return res.status(400).json({ error: 'Enter your contact number with the country code, for example +923001234567.' });
+  if (!bk.hasPhoto(req.user.email)) return res.status(400).json({ error: 'Upload your profile picture first. It is required.' });
   if (!bk.kyc(req.user.email).hasId) return res.status(400).json({ error: 'Upload a clear picture of your National ID first.' });
   const cur = bstatus(req.user.email);
   if (cur === 'approved' || cur === 'suspended') return res.status(409).json({ error: 'Your broker account is ' + cur + '.' });
   db.prepare("INSERT INTO brokers(email,profile_json,status,created_at,updated_at) VALUES(?,?, 'pending',?,?) ON CONFLICT(email) DO UPDATE SET profile_json=excluded.profile_json, status='pending', reason=NULL, updated_at=excluded.updated_at")
     .run(req.user.email, JSON.stringify(prof), now(), now());
   bk.saveContact(req.user.email, phone);
+  bk.savePayout(req.user.email, pay.provider, pay.number);
   res.json({ ok: true });
 }));
 /* --- in-app help assistant: the page answers common questions itself; this route is the optional AI for everything else --- */
@@ -444,7 +448,7 @@ app.get('/api/featured', (req, res) => {
 app.get('/api/brokers', (req, res) => { // public list: approved brokers only, no emails
   const rows = db.prepare("SELECT email,profile_json FROM brokers WHERE status='approved' ORDER BY updated_at DESC").all();
   const rt = {}; for (const r of db.prepare("SELECT broker,COUNT(*) n,AVG(rating) a FROM broker_reviews WHERE status='published' GROUP BY broker").all()) rt[r.broker] = { count: r.n, avg: Math.round(r.a * 10) / 10 };
-  res.json(rows.filter(r => mstatus(r.email) !== 'suspended').map(r => ({ id: opaque(r.email), ...JSON.parse(r.profile_json), rating: rt[r.email] || { count: 0, avg: null } })));
+  res.json(rows.filter(r => mstatus(r.email) !== 'suspended').map(r => ({ id: opaque(r.email), ...JSON.parse(r.profile_json), rating: rt[r.email] || { count: 0, avg: null }, tier: bk.tierOf(r.email), photo: bk.hasPhoto(r.email) })));
 });
 app.get('/api/admin/brokers', auth, adminOnly, (req, res) => {
   const rows = db.prepare('SELECT * FROM brokers ORDER BY created_at DESC').all();
