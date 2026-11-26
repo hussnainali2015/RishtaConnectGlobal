@@ -21,10 +21,39 @@ module.exports = function (db, E, mstatus) {
   const headers = extra => { const h = { apikey: key, ...extra }; if (key.startsWith('eyJ')) h.authorization = 'Bearer ' + key; return h; };
   const url = q => `${base}/rest/v1/${encodeURIComponent(table)}${q || ''}`;
   function explain(status, body) {
-    if (status === 404 || /PGRST205|does not exist|schema cache/i.test(body)) return `the table "${table}" does not exist in Supabase. Run the SQL in SUPABASE-PROFILES.md once.`;
+    if (status === 404 || /PGRST205|relation .* does not exist|Could not find the table/i.test(body)) // a missing COLUMN (PGRST204) is handled below return `the table "${table}" does not exist in Supabase. Run the SQL in SUPABASE-PROFILES.md once.`;
     if (status === 401 || status === 403 || /JWT|apikey|permission denied/i.test(body)) return 'Supabase refused the key. Use the SECRET key (sb_secret_... or service_role), not the public one.';
-    return `HTTP ${status} ${body.slice(0, 200)}`;
+    let j = {}; try { j = JSON.parse(body); } catch { /* not json */ }
+    const code = j.code || '', msg = j.message || body.slice(0, 200), raw = `HTTP ${status} ${code} ${msg}`.trim();
+    if (code === 'PGRST204' || /Could not find the '.*' column/i.test(msg)) return `${raw}. The table "${table}" in Supabase has different columns from what the site sends. Run the "fix an existing table" SQL in SUPABASE-PROFILES.md, or use a new table name (PROFILES_TABLE=member_profiles) and create it with the SQL there.`;
+    if (code === '42P10' || /ON CONFLICT/i.test(msg)) return `${raw}. The "email" column must be the primary key or have a unique constraint. Run the "fix an existing table" SQL in SUPABASE-PROFILES.md.`;
+    if (code === '23502') return `${raw}. A column that the site does not fill (for example "id") is marked NOT NULL with no default. Run the "fix an existing table" SQL in SUPABASE-PROFILES.md.`;
+    if (code === '22P02' || code === '22007' || code === '42804') return `${raw}. A column has a type that does not match the data (the site sends text for email, name, provider, status, consent_at, created_at; json for profile; a timestamp for updated_at).`;
+    if (code === '23503') return `${raw}. The table has a foreign key (for example to auth.users) that the site's rows cannot satisfy. Use a separate table name (PROFILES_TABLE=member_profiles).`;
+    return raw;
   }
+  const WANT = ['email', 'name', 'provider', 'profile', 'status', 'consent_at', 'created_at', 'updated_at'];
+  /** Reads the table's shape from Supabase once, and says in plain words what is wrong with it. Never blocks sign-ups. */
+  async function checkSchema() {
+    const problems = [];
+    try {
+      const r = await fetch(`${base}/rest/v1/`, { headers: headers({ accept: 'application/openapi+json' }) });
+      if (!r.ok) return problems; // some projects do not expose it: skip quietly
+      const spec = await r.json();
+      const def = (spec.definitions && spec.definitions[table]) || (spec.components && spec.components.schemas && spec.components.schemas[table]);
+      if (!def) problems.push(`the table "${table}" does not exist in Supabase yet. Run the SQL in SUPABASE-PROFILES.md once.`);
+      else {
+        const props = def.properties || {}, have = Object.keys(props);
+        const missing = WANT.filter(c => !have.includes(c)), needed = (def.required || []).filter(c => !WANT.includes(c));
+        if (missing.length) problems.push(`the table "${table}" has no column named: ${missing.join(', ')}. Run the "fix an existing table" SQL in SUPABASE-PROFILES.md.`);
+        if (needed.length) problems.push(`the table "${table}" requires a value for: ${needed.join(', ')}, which the site does not send. Run the "fix an existing table" SQL in SUPABASE-PROFILES.md.`);
+        if (props.email && !/Primary Key/i.test(props.email.description || '')) problems.push('"email" is not the primary key. It needs a unique constraint for saving to work (see "fix an existing table" in SUPABASE-PROFILES.md).');
+      }
+    } catch { /* offline or blocked: skip */ }
+    for (const m of problems) console.error('Supabase profiles check: ' + m);
+    return problems;
+  }
+  api.checkSchema = checkSchema;
   function row(email) {
     const u = db.prepare('SELECT email,name,provider,profile_json,consent_at,created_at FROM users WHERE email=?').get(email);
     if (!u) return null;
@@ -54,6 +83,7 @@ module.exports = function (db, E, mstatus) {
   api.remove = email => { if (!email) return; dirty.delete(email); gone.add(email); setImmediate(drain); };
   api.flush = async () => { await drain(); };
   api.backfill = async () => { // bring the whole table up to date (first start, or after any outage)
+    await checkSchema();
     for (const r of db.prepare('SELECT email FROM users').all()) dirty.add(r.email);
     await drain();
     if (!dirty.size) console.log(`Supabase table "${table}" is up to date.`);
