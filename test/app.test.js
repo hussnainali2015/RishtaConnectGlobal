@@ -836,3 +836,25 @@ test('broker challenge: payout details (admin only), 15 verified profiles in 90 
     assert.equal((await rival.get('/api/broker/dashboard')).json.challenge.remaining, 15);
   } finally { await T.stop(); }
 });
+
+test('Supabase profiles sync explains a 400 (wrong table shape) in plain words', async () => {
+  const http = require('node:http'), Database = require('better-sqlite3');
+  const spec = { definitions: { profiles: { required: ['id'], properties: { id: { type: 'string' }, username: { type: 'string' }, full_name: { type: 'string' }, updated_at: { type: 'string' } } } } }; // Supabase's "User Management" starter table
+  let posts = 0;
+  const srv = http.createServer((q, r) => { let b = ''; q.on('data', d => { b += d; }); q.on('end', () => {
+    if (q.method === 'GET') { r.setHeader('content-type', 'application/json'); return r.end(JSON.stringify(spec)); }
+    posts++; r.statusCode = 400; r.setHeader('content-type', 'application/json'); r.end(JSON.stringify({ code: 'PGRST204', message: "Could not find the 'consent_at' column of 'profiles' in the schema cache" }));
+  }); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const db = new Database(':memory:'); db.exec('CREATE TABLE users(email TEXT, name TEXT, provider TEXT, profile_json TEXT, consent_at TEXT, created_at TEXT)'); db.prepare("INSERT INTO users VALUES('a@x.com','A','google',NULL,NULL,'x')").run();
+  const logs = []; const orig = console.error; console.error = (...a) => logs.push(a.join(' '));
+  try {
+    const sync = require('../profiles-sync')(db, { SUPABASE_URL: `http://127.0.0.1:${srv.address().port}`, SUPABASE_SECRET_KEY: 'sb_secret_x' }, () => 'approved');
+    const problems = await sync.checkSchema();
+    assert.ok(problems.some(p => /no column named: email, name, provider, profile, status, consent_at, created_at/.test(p)));
+    assert.ok(problems.some(p => /requires a value for: id/.test(p)));
+    sync.sync('a@x.com'); await sync.flush();
+    assert.equal(posts, 1);
+    assert.ok(logs.some(l => /PGRST204/.test(l) && /fix an existing table/.test(l) && /PROFILES_TABLE=member_profiles/.test(l)), logs.join('\n'));
+  } finally { console.error = orig; srv.close(); }
+});
